@@ -6,7 +6,11 @@ from fastapi import APIRouter
 # from app.api.requirements import router as requirements_router
 # from app.api.risk import router as risk_router
 
+from app.api.requirements import router as requirements_router
+
 api_router = APIRouter()
+
+api_router.include_router(requirements_router)
 
 # Placeholder health-check at the router level
 @api_router.get("/ping")
