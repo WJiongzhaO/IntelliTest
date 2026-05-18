@@ -20,6 +20,12 @@ export interface RequirementResponse {
   conditions: string[];
   expected_actions: string[];
   is_structured: boolean;
+  risk_impact?: number | null;
+  risk_likelihood?: number | null;
+  risk_score?: number | null;
+  priority?: string | null;
+  risk_impact_rationale?: string | null;
+  risk_likelihood_rationale?: string | null;
   created_at?: string;
   updated_at?: string;
 }

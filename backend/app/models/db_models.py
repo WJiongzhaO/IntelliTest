@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -30,6 +30,12 @@ class RequirementModel(Base):
     conditions: Mapped[list | None] = mapped_column(JSON, default=list)
     expected_actions: Mapped[list | None] = mapped_column(JSON, default=list)
     is_structured: Mapped[bool] = mapped_column(Boolean, default=False)
+    risk_impact: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    risk_likelihood: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    priority: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    risk_impact_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
+    risk_likelihood_rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
