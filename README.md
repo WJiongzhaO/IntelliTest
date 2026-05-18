@@ -65,18 +65,32 @@ IntelliTest/
 
 ### 环境要求
 
-- Python 3.12+
+- Python 3.11+ （推荐 3.11）
 - Node.js 20+
-- Docker (可选)
+- Docker（可选）
 
 ### 后端启动
 
 ```bash
 cd backend
+
+# 1. 创建虚拟环境（仅首次）
 python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
+
+# 2. 激活虚拟环境
+#    Windows:
+venv\Scripts\activate
+#    Linux / macOS:
+source venv/bin/activate
+
+# 3. 安装依赖（仅首次或 requirements.txt 变更后）
 pip install -r requirements.txt
-cp ../.env.example .env    # 编辑 .env 填入 API Key
+
+# 4. 配置环境变量（从模板复制并填入 API Key）
+copy ..\.env.example .env     # Windows
+# cp ../.env.example .env     # Linux / macOS
+
+# 5. 启动
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -86,9 +100,8 @@ API 文档自动生成于 <http://localhost:8000/docs>
 
 ```bash
 cd frontend
-npm install
-cp ../.env.example .env    # 编辑 .env 配置
-npm run dev                 # http://localhost:3000
+npm install                    # 仅首次
+npm run dev                    # http://localhost:3000
 ```
 
 ### Docker 一键启动

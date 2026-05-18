@@ -9,8 +9,10 @@ class Settings(BaseSettings):
     # LLM
     anthropic_api_key: str = ""
     openai_api_key: str = ""
-    llm_provider: str = "anthropic"
-    llm_model: str = "claude-sonnet-4-6"
+    deepseek_api_key: str = ""
+    llm_provider: str = "deepseek"
+    llm_model: str = "deepseek-chat"
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
     llm_temperature_structured: float = 0.0
     llm_temperature_creative: float = 0.3
     llm_max_retries: int = 3
@@ -23,7 +25,7 @@ class Settings(BaseSettings):
     # Limits
     max_upload_size_mb: int = 10
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

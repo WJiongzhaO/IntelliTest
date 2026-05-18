@@ -1,56 +1,83 @@
-# Python
+# ===================== Python =====================
 __pycache__/
 *.py[cod]
 *.pyo
+*.so
 *.egg-info/
 dist/
 build/
 .eggs/
 *.egg
+*.whl
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+*.manifest
+*.spec
 venv/
 .venv/
 
-# Environment
+# ===================== Environment =====================
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
-# Node
+# ===================== Node / Frontend =====================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Build output
 frontend/dist/
 frontend/build/
+*.tsbuildinfo
 
-# IDE
+# ===================== IDE / Editor =====================
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
 *~
+.ropeproject/
 
-# OS
+# ===================== OS =====================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# Database
+# ===================== Database =====================
 *.db
+*.sqlite
 *.sqlite3
+db.*.sqlite3
 
-# Docker
+# ===================== Docker =====================
 .docker/
+docker-compose.override.yml
 
-# Logs
+# ===================== Logs =====================
 *.log
 logs/
 
-# API Keys
+# ===================== Secrets / Keys =====================
 *_api_key*
 *_apikey*
 *.pem
+*.key
+*.crt
+credentials.*
+secrets.*
+
+# ===================== Project docs (not for commit) =====================
+IntelliTest项目规划文档.md

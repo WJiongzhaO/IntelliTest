@@ -1,0 +1,75 @@
+{
+  "description": "FR 1.1 — Parse natural-language requirements into structured JSON.",
+  "engine": "requirement_structurer",
+  "temperature": 0,
+
+  "system_prompt": "You are a senior software testing analyst specializing in requirements analysis.\nYour task is to parse natural-language software requirements and extract structured\ninformation used for test design.\n\nFollow these rules:\n- Identify **input_fields**: every data field the user can provide or that the system receives.\n- Identify **data_ranges**: constraints, value ranges, length limits, or format rules.\n- Identify **conditions**: preconditions, triggers, or guard clauses that must be true.\n- Identify **expected_actions**: what the system should do when conditions are met.\n\nAlways output valid JSON. Be precise and concise. Do not invent fields that are not\nmentioned in the requirement text.",
+
+  "output_schema": "Output a JSON object with these keys:\n- \"input_fields\": string[] — names of input fields found in the requirement\n- \"data_ranges\": string[] — each describing a constraint (e.g. \"age: 0-120\")\n- \"conditions\": string[] — conditions or triggers described in the requirement\n- \"expected_actions\": string[] — what the system should do\n\nReturn ONLY valid JSON, no additional text or markdown fencing.",
+
+  "user_prompt_template": "Parse the following software requirement into structured components.\n\nRequirement:\n{requirement_text}\n\nOutput JSON:",
+
+  "few_shot_examples": [
+    {
+      "requirement": "用户输入用户名（3-20个字符，仅含字母数字）和密码（至少8个字符，含大小写字母和数字），点击登录。系统验证凭证，验证通过则跳转到首页，失败则显示'用户名或密码错误'。",
+      "output": {
+        "input_fields": ["username", "password"],
+        "data_ranges": [
+          "username: 3-20 characters, alphanumeric only",
+          "password: minimum 8 characters, must contain uppercase, lowercase, and digit"
+        ],
+        "conditions": ["User clicks login button", "Credentials are provided"],
+        "expected_actions": [
+          "Validate credentials against stored data",
+          "If valid: redirect to home page",
+          "If invalid: display 'Username or password error'"
+        ]
+      }
+    },
+    {
+      "requirement": "Customer places an order with quantity between 1 and 99. If stock >= quantity, the system reserves inventory and calculates total = quantity * unit_price * (1 - discount_rate). If stock < quantity, display 'Insufficient stock' and do not proceed.",
+      "output": {
+        "input_fields": ["quantity", "unit_price", "discount_rate"],
+        "data_ranges": [
+          "quantity: 1 to 99 (integer)",
+          "discount_rate: 0.0 to 1.0"
+        ],
+        "conditions": [
+          "Customer places an order",
+          "stock >= quantity (valid order)",
+          "stock < quantity (insufficient stock)"
+        ],
+        "expected_actions": [
+          "Reserve inventory",
+          "Calculate total = quantity * unit_price * (1 - discount_rate)",
+          "If insufficient stock: display error and stop processing"
+        ]
+      }
+    },
+    {
+      "requirement": "User submits a registration form with email, age (must be 18+), and optional phone number. System validates email format, checks age >= 18. If valid, creates account and sends confirmation email. If email already exists, return error 'Email already registered'.",
+      "output": {
+        "input_fields": ["email", "age", "phone_number"],
+        "data_ranges": [
+          "email: valid email format",
+          "age: integer >= 18",
+          "phone_number: optional, any format"
+        ],
+        "conditions": [
+          "User submits registration form",
+          "Email format is valid",
+          "Age >= 18",
+          "Email not already registered",
+          "Email already registered (error case)"
+        ],
+        "expected_actions": [
+          "Validate email format",
+          "Check age constraint",
+          "Check email uniqueness",
+          "If valid: create account and send confirmation email",
+          "If email exists: return 'Email already registered' error"
+        ]
+      }
+    }
+  ]
+}
