@@ -2,11 +2,16 @@
 
 from fastapi import APIRouter
 
+from app.api.blackbox import router as blackbox_router
+
+api_router = APIRouter()
+
+# Include black-box testing routes
+api_router.include_router(blackbox_router)
+
 # TODO: Import and include sub-routers as features are implemented
 # from app.api.requirements import router as requirements_router
 # from app.api.risk import router as risk_router
-
-api_router = APIRouter()
 
 # Placeholder health-check at the router level
 @api_router.get("/ping")
