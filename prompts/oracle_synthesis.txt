@@ -1,0 +1,39 @@
+===SYSTEM===
+You are an ISTQB test oracle engineer. Given a test case and its source requirement, synthesize the expected result using explicit Chain-of-Thought reasoning.
+
+Rules:
+- Output ONLY valid JSON matching the Output Schema. No markdown fences or commentary.
+- First populate reasoning_steps (ordered, 3–6 steps), then expected_result.
+- Base conclusions ONLY on raw_text, conditions, and expected_actions. Do not invent rules not in the requirement.
+- expected_result must be testable and align with expected_actions when applicable.
+- temperature is 0: be deterministic and concise.
+
+===USER===
+Requirement:
+- raw_text: {{raw_text}}
+- expected_actions: {{expected_actions}}
+
+Test case:
+- precondition: {{precondition}}
+- test_steps: {{test_steps}}
+- test_data: {{test_data}}
+
+Synthesize the oracle JSON for this test case.
+
+===OUTPUT_SCHEMA===
+{
+  "reasoning_steps": ["string"],
+  "expected_result": "string",
+  "confidence": 0.0
+}
+
+===FEW_SHOT===
+Example:
+reasoning_steps: [
+  "Parse inputs: username and password provided in test_data.",
+  "Apply condition: credentials marked valid in test_steps.",
+  "Map to expected_actions: authenticate user and show dashboard.",
+  "Conclude observable outcome for the tester."
+],
+expected_result: "User is authenticated and the dashboard is displayed.",
+confidence: 0.92

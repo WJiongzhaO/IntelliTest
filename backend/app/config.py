@@ -9,8 +9,10 @@ class Settings(BaseSettings):
     # LLM
     anthropic_api_key: str = ""
     openai_api_key: str = ""
-    llm_provider: str = "anthropic"
-    llm_model: str = "claude-sonnet-4-6"
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+    llm_provider: str = "deepseek"
+    llm_model: str = "deepseek-chat"
     llm_temperature_structured: float = 0.0
     llm_temperature_creative: float = 0.3
     llm_max_retries: int = 3

@@ -76,7 +76,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp ../.env.example .env    # 编辑 .env 填入 API Key
+cp ../.env.example backend/.env   # 编辑 backend/.env 填入 API Key
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -94,9 +94,12 @@ npm run dev                 # http://localhost:3000
 ### Docker 一键启动
 
 ```bash
-cp .env.example .env       # 编辑 .env 填入 API Key
+# 环境变量统一放在 backend/.env（与 docker-compose 一致）
+cp .env.example backend/.env   # 或使用团队提供的 backend/.env
 docker-compose up --build
 ```
+
+若拉取 `docker.io` 超时，`docker-compose.yml` 已配置 DaoCloud 镜像前缀；也可先执行 `docker pull docker.m.daocloud.io/library/node:20-alpine`。
 
 ## 功能模块映射 (FRs)
 
@@ -118,6 +121,18 @@ docker-compose up --build
 - **Python**: PEP 8, Black (100 chars), 类型注解, Google docstring
 - **TypeScript**: ESLint + Prettier, strict mode, 函数组件 + Hooks
 - **API Key**: 仅通过 `.env` 配置，禁止硬编码和提交
+
+## API 端点摘要（成员 D）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/whitebox/model` | 白盒建模：状态图 + 覆盖序列 + 用例 |
+| PUT | `/api/v1/whitebox/model/{id}` | 人工修订模型后重算覆盖 |
+| POST | `/api/v1/oracle/synthesize` | CoT 合成测试预言 |
+| PUT | `/api/v1/oracle/{id}/review` | 确认/驳回预言（`modified_by_user`） |
+| POST | `/api/v1/test-design/combined` | 黑盒+白盒合并流水线 |
+
+完整契约见 <http://localhost:8000/docs>。
 
 ## 交付物
 
