@@ -14,8 +14,9 @@ from app.engines.requirement_structurer.structurer import (
     StructuringError,
     structure_requirement,
 )
+from app.engines.risk_analyzer.analyzer import RiskAnalysisError, analyze_requirement_risk
 from app.models.db_models import RequirementModel
-from app.models.requirement import StructuredRequirement
+from app.models.risk import RiskAssessment
 from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -55,6 +56,12 @@ class RequirementResponse(BaseModel):
     conditions: list[str]
     expected_actions: list[str]
     is_structured: bool
+    risk_impact: Optional[int] = None
+    risk_likelihood: Optional[int] = None
+    risk_score: Optional[int] = None
+    priority: Optional[str] = None
+    risk_impact_rationale: Optional[str] = None
+    risk_likelihood_rationale: Optional[str] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -74,6 +81,12 @@ def _to_response(model: RequirementModel) -> RequirementResponse:
         conditions=model.conditions or [],
         expected_actions=model.expected_actions or [],
         is_structured=model.is_structured,
+        risk_impact=model.risk_impact,
+        risk_likelihood=model.risk_likelihood,
+        risk_score=model.risk_score,
+        priority=model.priority,
+        risk_impact_rationale=model.risk_impact_rationale,
+        risk_likelihood_rationale=model.risk_likelihood_rationale,
         created_at=model.created_at.isoformat() if model.created_at else None,
         updated_at=model.updated_at.isoformat() if model.updated_at else None,
     )
@@ -231,3 +244,34 @@ async def structure_single_requirement(
     await db.commit()
     await db.refresh(model)
     return _to_response(model)
+
+
+@router.post("/{requirement_id}/risk", response_model=RiskAssessment)
+async def analyze_risk_for_requirement(requirement_id: str, db: AsyncSession = Depends(get_db)):
+    """FR 2.0 — LLM-assisted risk scoring and priority (persisted on requirement)."""
+    model = await db.get(RequirementModel, requirement_id)
+    if not model:
+        raise HTTPException(404, f"Requirement {requirement_id} not found")
+
+    try:
+        assessment = await analyze_requirement_risk(
+            model.id,
+            model.raw_text,
+            input_fields=model.input_fields or [],
+            data_ranges=model.data_ranges or [],
+            conditions=model.conditions or [],
+            expected_actions=model.expected_actions or [],
+        )
+    except RiskAnalysisError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    model.risk_impact = assessment.impact
+    model.risk_likelihood = assessment.likelihood
+    model.risk_score = assessment.risk_score
+    model.priority = assessment.priority
+    model.risk_impact_rationale = assessment.impact_rationale
+    model.risk_likelihood_rationale = assessment.likelihood_rationale
+
+    await db.commit()
+    await db.refresh(model)
+    return assessment

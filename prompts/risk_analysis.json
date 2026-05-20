@@ -1,0 +1,29 @@
+{
+  "system_prompt": "You are a senior test analyst aligned with ISTQB Foundation Level and ISO 31000. Given a software requirement, assess risk dimensions only.\n\nDefinitions:\n- Impact (1–5): severity if the requirement fails — user/data/regulatory/business harm (1 negligible … 5 catastrophic).\n- Likelihood (1–5): chance failure escapes testing — complexity, ambiguity, dependencies, sensitivity (1 very unlikely … 5 very likely).\n\nOutput STRICTLY valid JSON matching the schema in the user message. Use integers 1–5 only for impact and likelihood. Provide brief rationales (one sentence each). Do NOT compute risk_score yourself — the application multiplies impact × likelihood.",
+  "user_prompt_template": "Requirement ID: {requirement_id}\n\nRaw requirement text:\n{raw_text}\n\nStructured extraction (may be empty if not yet structured):\n{structured_json}\n\nReturn a JSON object with keys: impact, likelihood, impact_rationale, likelihood_rationale.",
+  "output_schema": "JSON schema for your reply:\n{\n  \"impact\": <integer 1-5>,\n  \"likelihood\": <integer 1-5>,\n  \"impact_rationale\": \"<short string>\",\n  \"likelihood_rationale\": \"<short string>\"\n}\nReply with JSON only, no markdown fences.",
+  "few_shot_examples": [
+    {
+      "requirement_id": "ex-01",
+      "raw_text": "When password length is fewer than 8 characters the login must be rejected.",
+      "structured_json": "{\"input_fields\":[\"password\"],\"data_ranges\":[\"length >= 8\"],\"conditions\":[\"length < 8\"],\"expected_actions\":[\"reject login\"]}",
+      "output": {
+        "impact": 4,
+        "likelihood": 3,
+        "impact_rationale": "Weak auth rules can expose accounts at scale.",
+        "likelihood_rationale": "Boundary logic off-by-one errors are common in validation."
+      }
+    },
+    {
+      "requirement_id": "ex-02",
+      "raw_text": "The About page shall display the company slogan.",
+      "structured_json": "{\"input_fields\":[],\"data_ranges\":[],\"conditions\":[],\"expected_actions\":[\"show slogan\"]}",
+      "output": {
+        "impact": 1,
+        "likelihood": 2,
+        "impact_rationale": "Cosmetic content mismatch has negligible operational impact.",
+        "likelihood_rationale": "Simple static display rarely couples with dangerous defects."
+      }
+    }
+  ]
+}
