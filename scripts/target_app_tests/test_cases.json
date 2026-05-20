@@ -1,0 +1,22 @@
+[
+  {
+    "id": "tc-st-001",
+    "requirement_id": "req-login-demo",
+    "technique": "StateTransition",
+    "title": "Login transition coverage",
+    "precondition": "System in state: LoggedOut",
+    "test_steps": ["State: LoggedOut", "State: Active"],
+    "test_data": "login, valid credentials",
+    "expected_result": "User is authenticated and the dashboard is displayed.",
+    "priority": "High"
+  },
+  {
+    "id": "req-login-demo_EP_001",
+    "requirement_id": "req-login-demo",
+    "technique": "EP",
+    "title": "Valid equivalence class login",
+    "test_steps": ["Submit valid username and password"],
+    "expected_result": "Login succeeds",
+    "priority": "Medium"
+  }
+]

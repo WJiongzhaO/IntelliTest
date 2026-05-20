@@ -5,8 +5,10 @@ import {
   ExperimentOutlined,
   BranchesOutlined,
   AuditOutlined,
+  DeploymentUnitOutlined,
 } from '@ant-design/icons';
 import RequirementsPage from './pages/RequirementsPage';
+import TestDesignWorkbench from './pages/TestDesignWorkbench';
 import WhiteboxWorkbench from './pages/WhiteboxWorkbench';
 import OracleEditor from './pages/OracleEditor';
 
@@ -14,6 +16,11 @@ const { Header, Content, Footer, Sider } = Layout;
 
 const navItems = [
   { key: '/', icon: <FileTextOutlined />, label: <Link to="/">Requirements</Link> },
+  {
+    key: '/test-design',
+    icon: <DeploymentUnitOutlined />,
+    label: <Link to="/test-design">Test Design (C+D)</Link>,
+  },
   {
     key: '/whitebox',
     icon: <BranchesOutlined />,
@@ -42,6 +49,7 @@ function App() {
           <Content style={{ padding: 24 }}>
             <Routes>
               <Route path="/" element={<RequirementsPage />} />
+              <Route path="/test-design" element={<TestDesignWorkbench />} />
               <Route path="/whitebox" element={<WhiteboxWorkbench />} />
               <Route path="/oracle" element={<OracleEditor />} />
             </Routes>

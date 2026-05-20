@@ -15,6 +15,18 @@ services:
       - ./backend:/app
       - ./prompts:/app/prompts:ro
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
   frontend:
     build:
@@ -27,7 +39,10 @@ services:
       - "3000:3000"
     env_file:
       - ./backend/.env
+    environment:
+      API_PROXY_TARGET: http://backend:8000
     volumes:
       - ./frontend/src:/app/src
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy

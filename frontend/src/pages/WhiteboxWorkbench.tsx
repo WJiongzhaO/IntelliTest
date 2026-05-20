@@ -9,11 +9,15 @@ import {
   Row,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Typography,
   message,
 } from 'antd';
+import { listRequirements } from '../api/requirements';
+import { toStructuredRequirement } from '../utils/requirementMapper';
+import type { RequirementResponse } from '../types/models';
 import mermaid from 'mermaid';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -43,7 +47,9 @@ const defaultRequirement = (): StructuredRequirement => ({
 
 function WhiteboxWorkbench() {
   const diagramId = useId().replace(/:/g, '');
+  const [dbRows, setDbRows] = useState<RequirementResponse[]>([]);
   const [requirement, setRequirement] = useState<StructuredRequirement>(defaultRequirement);
+  const [useLlm, setUseLlm] = useState(false);
   const [coverage, setCoverage] = useState<CoverageCriterion>('ALL_TRANSITIONS');
   const [model, setModel] = useState<StateMachineModel | null>(null);
   const [sequences, setSequences] = useState<TestSequence[]>([]);
@@ -68,6 +74,12 @@ function WhiteboxWorkbench() {
   }, []);
 
   useEffect(() => {
+    void listRequirements()
+      .then((rows) => setDbRows(rows.filter((r) => r.is_structured)))
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     void renderDiagram();
   }, [renderDiagram]);
 
@@ -76,9 +88,10 @@ function WhiteboxWorkbench() {
     setError(null);
     try {
       const response = await createWhiteboxModel({
+        requirement_id: requirement.id,
         requirement,
         coverage,
-        use_llm: false,
+        use_llm: useLlm,
       });
       setModel(response.model);
       setSequences(response.sequences);
@@ -147,6 +160,20 @@ function WhiteboxWorkbench() {
 
       <Card title="Structured Requirement">
         <Form layout="vertical">
+          <Form.Item label="Load from Requirements (A/B)">
+            <Select
+              allowClear
+              placeholder="Pick structured requirement"
+              options={dbRows.map((r) => ({ value: r.id, label: r.id }))}
+              onChange={(id) => {
+                const row = dbRows.find((r) => r.id === id);
+                if (row) setRequirement(toStructuredRequirement(row));
+              }}
+            />
+          </Form.Item>
+          <Form.Item label="Use LLM extraction">
+            <Switch checked={useLlm} onChange={setUseLlm} />
+          </Form.Item>
           <Form.Item label="Requirement ID">
             <Input
               value={requirement.id}

@@ -15,6 +15,7 @@ export interface OracleSynthesizeRequest {
 export interface OracleReviewRequest {
   action: 'confirm' | 'reject';
   edited_expected_result?: string;
+  sync_test_case?: boolean;
 }
 
 export async function synthesizeOracles(

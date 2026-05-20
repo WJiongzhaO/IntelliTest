@@ -68,6 +68,11 @@ def run_combined_pipeline(
         description=f"Techniques: {', '.join(techniques)}",
         test_cases=cases,
     )
+    from app.repositories.memory_store import store
+
+    store.last_suite_id = suite.id
+    for case in cases:
+        store.test_cases[case.id] = case
     logger.info(
         "Combined pipeline suite=%s cases=%d techniques=%s",
         suite.id,

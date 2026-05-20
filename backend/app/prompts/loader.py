@@ -19,13 +19,11 @@ class PromptTemplate(TypedDict):
 _SECTION_PATTERN = re.compile(r"^===(SYSTEM|USER|OUTPUT_SCHEMA|FEW_SHOT)===$", re.MULTILINE)
 
 
-def _project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
-
-
 def prompts_dir() -> Path:
-    """Return the shared prompts directory at repository root."""
-    return _project_root() / "prompts"
+    """Return the shared prompts directory (repo root or Docker /app/prompts)."""
+    from app.utils.prompt_paths import resolve_prompts_dir
+
+    return resolve_prompts_dir(from_file=__file__)
 
 
 def load_prompt_template(name: str) -> PromptTemplate:

@@ -1,15 +1,7 @@
 # Member D — Design & Execution Hooks
 
-> Template for detailed test design documentation (FR 4.0 / FR 5.0).
+正式交付文档：
 
-## Whitebox case design table
-
-<!-- Link exported JSON test case IDs to state paths -->
-
-## Oracle samples
-
-<!-- Attach CoT reasoning_steps + confirmed expected_result examples -->
-
-## Target application mapping
-
-<!-- scripts/target_app_tests/ PyTest + Selenium skeleton aligns case IDs with tool export -->
+- [白盒建模方法说明](./白盒建模方法说明.md)
+- [详细测试设计与执行文档](./详细测试设计与执行文档.md)
+- 自动化脚本骨架：`../scripts/target_app_tests/`

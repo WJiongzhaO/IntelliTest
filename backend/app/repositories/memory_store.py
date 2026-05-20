@@ -13,6 +13,8 @@ class MemoryStore:
         self.whitebox_models: dict[str, StateMachineModel] = {}
         self.oracles: dict[str, OracleResult] = {}
         self.requirements: dict[str, object] = {}
+        self.test_cases: dict[str, object] = {}
+        self.last_suite_id: str | None = None
 
 
 store = MemoryStore()

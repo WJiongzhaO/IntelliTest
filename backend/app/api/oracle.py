@@ -37,6 +37,7 @@ class OracleValidateRequest(BaseModel):
 class OracleReviewRequest(BaseModel):
     action: Literal["confirm", "reject"]
     edited_expected_result: Optional[str] = None
+    sync_test_case: bool = True
 
 
 class OracleBatchSuiteRequest(BaseModel):
@@ -101,6 +102,17 @@ def review_oracle(oracle_id: str, body: OracleReviewRequest) -> OracleResult:
         }
     )
     store.oracles[oracle_id] = updated
+
+    if body.sync_test_case and body.action == "confirm":
+        cached = store.test_cases.get(updated.test_case_id)
+        if isinstance(cached, TestCase):
+            store.test_cases[updated.test_case_id] = cached.model_copy(
+                update={
+                    "expected_result": expected,
+                    "modified_by_user": True,
+                }
+            )
+
     return updated
 
 

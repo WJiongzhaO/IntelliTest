@@ -1,19 +1,13 @@
-"""Prompt loader for requirement structuring (FR 1.1).
-
-Loads the canonical prompt template from the version-controlled file at
-prompts/requirement_structure.json — the single source of truth.
-
-Each prompt contains the three required parts:
-  - System Prompt
-  - User Prompt Template (with {requirement_text} placeholder)
-  - Output Schema
-"""
+"""Prompt loader for requirement structuring (FR 1.1)."""
 
 import json
-from pathlib import Path
 
-# Canonical prompt file — version-controlled, independent of code
-PROMPT_FILE = Path(__file__).resolve().parents[4] / "prompts" / "requirement_structure.json"
+from app.utils.prompt_paths import resolve_prompt_file
+
+PROMPT_FILE = resolve_prompt_file(
+    "requirement_structure.json",
+    from_file=__file__,
+)
 
 with open(PROMPT_FILE, encoding="utf-8") as fh:
     _data = json.load(fh)

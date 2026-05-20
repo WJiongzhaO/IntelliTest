@@ -135,6 +135,12 @@ docker-compose up --build
 - **TypeScript**: ESLint + Prettier, strict mode, 函数组件 + Hooks
 - **API Key**: 仅通过 `.env` 配置，禁止硬编码和提交
 
+## 成员 D 文档
+
+- [docs/白盒建模方法说明.md](docs/白盒建模方法说明.md)
+- [docs/详细测试设计与执行文档.md](docs/详细测试设计与执行文档.md)
+- [scripts/target_app_tests/](scripts/target_app_tests/) — PyTest 骨架
+
 ## API 端点摘要
 
 | 方法 | 路径 | 说明 |

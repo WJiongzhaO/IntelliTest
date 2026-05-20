@@ -5,9 +5,11 @@ from __future__ import annotations
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.engines.whitebox_modeler.generator import DefaultStateModelGenerator, replan_from_model
 from app.engines.whitebox_modeler.mermaid_renderer import ensure_mermaid, render_mermaid
 from app.exceptions import WhiteboxModelError
@@ -20,6 +22,7 @@ from app.models.state_machine import (
 )
 from app.models.test_case import TestCase
 from app.repositories.memory_store import store
+from app.services.requirement_resolver import resolve_structured_requirement
 
 router = APIRouter()
 
@@ -56,29 +59,22 @@ class WhiteboxModelUpdate(BaseModel):
     coverage: CoverageCriterion = CoverageCriterion.ALL_STATES
 
 
-def _resolve_requirement(body: WhiteboxModelRequest) -> StructuredRequirement:
-    if body.requirement:
-        return body.requirement
-    if body.requirement_id and body.requirement_id in store.requirements:
-        req = store.requirements[body.requirement_id]
-        if isinstance(req, StructuredRequirement):
-            return req
-    if body.requirement_id:
-        return StructuredRequirement(
-            id=body.requirement_id,
-            raw_text=f"Requirement {body.requirement_id}",
-            input_fields=[],
-            conditions=[],
-            expected_actions=[],
-        )
-    raise HTTPException(status_code=400, detail="requirement or requirement_id required")
+def _register_cases(cases: list[TestCase]) -> None:
+    for case in cases:
+        store.test_cases[case.id] = case
 
 
 @router.post("/model", response_model=WhiteboxModelResponse)
-def create_whitebox_model(body: WhiteboxModelRequest) -> WhiteboxModelResponse:
+async def create_whitebox_model(
+    body: WhiteboxModelRequest,
+    db: AsyncSession = Depends(get_db),
+) -> WhiteboxModelResponse:
     """Extract state machine, plan coverage sequences, and map test cases."""
-    requirement = _resolve_requirement(body)
-    store.requirements[requirement.id] = requirement
+    requirement = await resolve_structured_requirement(
+        db,
+        requirement_id=body.requirement_id,
+        inline=body.requirement,
+    )
     generator = DefaultStateModelGenerator()
 
     try:
@@ -100,8 +96,11 @@ def create_whitebox_model(body: WhiteboxModelRequest) -> WhiteboxModelResponse:
             raise HTTPException(status_code=502, detail=str(retry_exc)) from retry_exc
 
     model_id = model.id or f"wm-{uuid.uuid4().hex[:8]}"
-    model = model.model_copy(update={"id": model_id})
+    model = model.model_copy(
+        update={"id": model_id, "requirement_id": requirement.id},
+    )
     store.whitebox_models[model_id] = model
+    _register_cases(test_cases)
 
     return WhiteboxModelResponse(
         model=model,
@@ -112,7 +111,7 @@ def create_whitebox_model(body: WhiteboxModelRequest) -> WhiteboxModelResponse:
 
 
 @router.get("/model/{model_id}", response_model=StateMachineModel)
-def get_whitebox_model(model_id: str) -> StateMachineModel:
+async def get_whitebox_model(model_id: str) -> StateMachineModel:
     model = store.whitebox_models.get(model_id)
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -120,7 +119,11 @@ def get_whitebox_model(model_id: str) -> StateMachineModel:
 
 
 @router.put("/model/{model_id}", response_model=WhiteboxModelResponse)
-def update_whitebox_model(model_id: str, body: WhiteboxModelUpdate) -> WhiteboxModelResponse:
+async def update_whitebox_model(
+    model_id: str,
+    body: WhiteboxModelUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> WhiteboxModelResponse:
     existing = store.whitebox_models.get(model_id)
     if not existing:
         raise HTTPException(status_code=404, detail="Model not found")
@@ -135,20 +138,29 @@ def update_whitebox_model(model_id: str, body: WhiteboxModelUpdate) -> WhiteboxM
     updated = updated.model_copy(update={"revision": existing.revision + 1})
     updated = ensure_mermaid(updated)
 
-    requirement_id = updated.requirement_id or "unknown"
-    requirement = store.requirements.get(requirement_id)
-    if not isinstance(requirement, StructuredRequirement):
-        requirement = StructuredRequirement(
-            id=requirement_id,
-            raw_text="",
-            input_fields=[],
-            conditions=[],
-            expected_actions=[],
+    if updated.requirement_id:
+        requirement = await resolve_structured_requirement(
+            db,
+            requirement_id=updated.requirement_id,
+        )
+    else:
+        cached = store.requirements.get("unknown")
+        requirement = (
+            cached
+            if isinstance(cached, StructuredRequirement)
+            else StructuredRequirement(
+                id="unknown",
+                raw_text="",
+                input_fields=[],
+                conditions=[],
+                expected_actions=[],
+            )
         )
 
     sequences, test_cases = replan_from_model(requirement, updated, body.coverage)
-
     store.whitebox_models[model_id] = updated
+    _register_cases(test_cases)
+
     return WhiteboxModelResponse(
         model=updated,
         sequences=sequences,
@@ -158,7 +170,7 @@ def update_whitebox_model(model_id: str, body: WhiteboxModelUpdate) -> WhiteboxM
 
 
 @router.post("/regenerate-mermaid", response_model=MermaidRegenerateResponse)
-def regenerate_mermaid(body: MermaidRegenerateRequest) -> MermaidRegenerateResponse:
+async def regenerate_mermaid(body: MermaidRegenerateRequest) -> MermaidRegenerateResponse:
     model = StateMachineModel(
         initial_state=body.initial_state,
         states=body.states,

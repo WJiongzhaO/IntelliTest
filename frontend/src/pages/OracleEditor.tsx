@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
@@ -8,13 +8,18 @@ import {
   Input,
   List,
   Row,
+  Select,
   Space,
+  Switch,
   Tag,
   Typography,
   message,
 } from 'antd';
+import { getRequirement } from '../api/requirements';
+import { SUITE_STORAGE_KEY } from './TestDesignWorkbench';
+import type { OracleResult, StructuredRequirement, TestCase, TestSuite } from '../types/models';
+import { toStructuredRequirement } from '../utils/requirementMapper';
 import { reviewOracle, synthesizeOracles, validateOracle } from '../api/oracle';
-import type { OracleResult, StructuredRequirement, TestCase } from '../types/models';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -43,10 +48,29 @@ const sampleCase = (): TestCase => ({
 
 function OracleEditor() {
   const [requirement, setRequirement] = useState<StructuredRequirement>(sampleRequirement);
+  const [suiteCases, setSuiteCases] = useState<TestCase[]>([]);
   const [testCase, setTestCase] = useState<TestCase>(sampleCase);
   const [oracle, setOracle] = useState<OracleResult | null>(null);
   const [expectedEdit, setExpectedEdit] = useState('');
   const [loading, setLoading] = useState(false);
+  const [useLlm, setUseLlm] = useState(false);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem(SUITE_STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const suite = JSON.parse(raw) as TestSuite;
+      setSuiteCases(suite.test_cases);
+      if (suite.test_cases[0]) {
+        setTestCase(suite.test_cases[0]);
+        void getRequirement(suite.test_cases[0].requirement_id).then((row) =>
+          setRequirement(toStructuredRequirement(row)),
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleSynthesize = async () => {
     setLoading(true);
@@ -54,7 +78,7 @@ function OracleEditor() {
       const { oracles } = await synthesizeOracles({
         requirement,
         test_cases: [testCase],
-        use_llm: false,
+        use_llm: useLlm,
       });
       const first = oracles[0] ?? null;
       setOracle(first);
@@ -92,6 +116,7 @@ function OracleEditor() {
       const updated = await reviewOracle(oracle.id, {
         action,
         edited_expected_result: action === 'confirm' ? expectedEdit : undefined,
+        sync_test_case: true,
       });
       setOracle(updated);
       message.success(action === 'confirm' ? 'Oracle confirmed' : 'Oracle rejected');
@@ -110,6 +135,27 @@ function OracleEditor() {
         <Col xs={24} lg={12}>
           <Card title="Test Case">
             <Form layout="vertical">
+              {suiteCases.length > 0 && (
+                <Form.Item label="From combined suite">
+                  <Select
+                    value={testCase.id}
+                    options={suiteCases.map((c) => ({
+                      value: c.id,
+                      label: `${c.id} (${c.technique})`,
+                    }))}
+                    onChange={(id) => {
+                      const picked = suiteCases.find((c) => c.id === id);
+                      if (picked) {
+                        setTestCase(picked);
+                        setExpectedEdit(picked.expected_result ?? '');
+                      }
+                    }}
+                  />
+                </Form.Item>
+              )}
+              <Form.Item label="Use LLM (CoT)">
+                <Switch checked={useLlm} onChange={setUseLlm} />
+              </Form.Item>
               <Form.Item label="Title">
                 <Input
                   value={testCase.title}
