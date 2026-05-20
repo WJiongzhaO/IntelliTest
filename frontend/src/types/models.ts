@@ -60,3 +60,60 @@ export interface TestSuite {
 export interface FormEntry {
   raw_text: string;
 }
+
+/** Whitebox coverage criterion (FR 4.0). */
+export type CoverageCriterion = 'ALL_STATES' | 'ALL_TRANSITIONS';
+
+/** Five-tuple state transition edge. */
+export interface StateTransitionTuple {
+  state: string;
+  event: string;
+  guard?: string;
+  action?: string;
+  next_state: string;
+}
+
+/** State machine model with Mermaid diagram. */
+export interface StateMachineModel {
+  initial_state: string;
+  states: string[];
+  transitions: StateTransitionTuple[];
+  mermaid_diagram: string;
+  id?: string;
+  requirement_id?: string;
+  revision?: number;
+}
+
+/** Planned test sequence for state coverage. */
+export interface TestSequence {
+  sequence_id: string;
+  steps: string[];
+  covered_items: string[];
+  derived_test_cases: TestCase[];
+}
+
+/** Oracle synthesis / review record (FR 5.0). */
+export type OracleStatus = 'pending_review' | 'confirmed' | 'rejected';
+
+export interface OracleResult {
+  id: string;
+  test_case_id: string;
+  expected_result: string;
+  reasoning_steps: string[];
+  confidence?: number;
+  consistent_with_requirement: boolean;
+  validation_messages: string[];
+  status: OracleStatus;
+  modified_by_user: boolean;
+  revision?: number;
+}
+
+/** Black-box coverage item (FR 3.0). */
+export interface CoverageItem {
+  id: string;
+  requirement_id: string;
+  description: string;
+  item_type: string;
+  selected_techniques: ('EP' | 'BVA' | 'DT')[];
+  covered_by_test_cases: string[];
+}

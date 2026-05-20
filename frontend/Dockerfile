@@ -1,9 +1,12 @@
-FROM node:20-alpine
+# Override via docker-compose build.args when Docker Hub is unreachable
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE}
 
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm install
 
 COPY . .
 
