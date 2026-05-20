@@ -5,17 +5,18 @@ from __future__ import annotations
 import uuid
 from typing import Sequence
 
+from app.engines.blackbox_generator import BlackBoxTestGenerator
 from app.engines.oracle_synthesizer.synthesizer import DefaultOracleSynthesizer
 from app.engines.whitebox_modeler.generator import DefaultStateModelGenerator
 from app.models.requirement import StructuredRequirement
 from app.models.state_machine import CoverageCriterion
-from app.models.test_case import Priority, TestCase, TestSuite
+from app.models.test_case import BlackBoxTechnique, Priority, TestCase, TestSuite
 from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
 _PRIORITY_RANK = {Priority.HIGH: 3, Priority.MEDIUM: 2, Priority.LOW: 1}
-_TECHNIQUE_BLACKBOX = {"EP", "BVA", "DT"}
+_BLACKBOX_CODES = frozenset({"EP", "BVA", "DT"})
 
 
 def run_combined_pipeline(
@@ -30,10 +31,16 @@ def run_combined_pipeline(
     """Merge blackbox and whitebox cases, optionally synthesize oracles."""
     merged: dict[str, TestCase] = {}
 
-    if blackbox_cases:
-        for case in blackbox_cases:
-            if case.technique in _TECHNIQUE_BLACKBOX:
-                _upsert_case(merged, case)
+    for case in blackbox_cases or []:
+        if _is_blackbox_technique(case):
+            _upsert_case(merged, case)
+
+    requested_blackbox = [t for t in techniques if t in _BLACKBOX_CODES]
+    if requested_blackbox:
+        engine = BlackBoxTestGenerator()
+        generated = _generate_blackbox_cases(engine, requirement, requested_blackbox)
+        for case in generated:
+            _upsert_case(merged, case)
 
     if "StateTransition" in techniques:
         generator = DefaultStateModelGenerator()
@@ -68,6 +75,34 @@ def run_combined_pipeline(
         list(techniques),
     )
     return suite
+
+
+def _generate_blackbox_cases(
+    engine: BlackBoxTestGenerator,
+    requirement: StructuredRequirement,
+    techniques: list[str],
+) -> list[TestCase]:
+    if set(techniques) >= _BLACKBOX_CODES:
+        return engine.generate_all_techniques(requirement)
+
+    cases: list[TestCase] = []
+    for code in techniques:
+        technique = BlackBoxTechnique(code)
+        cases.extend(engine.generate_specific_technique(requirement, technique))
+    return cases
+
+
+def _technique_code(case: TestCase) -> str | None:
+    if case.technique is None:
+        return None
+    if isinstance(case.technique, BlackBoxTechnique):
+        return case.technique.value
+    return str(case.technique)
+
+
+def _is_blackbox_technique(case: TestCase) -> bool:
+    code = _technique_code(case)
+    return code in _BLACKBOX_CODES if code else False
 
 
 def _upsert_case(store: dict[str, TestCase], case: TestCase) -> None:

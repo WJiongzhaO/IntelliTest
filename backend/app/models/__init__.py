@@ -8,10 +8,18 @@ from app.models.state_machine import (
     StateTransitionTuple,
     TestSequence,
 )
-from app.models.test_case import Priority, TestCase, TestSuite
+from app.models.test_case import (
+    BlackBoxTechnique,
+    CoverageItem,
+    Priority,
+    TestCase,
+    TestSuite,
+)
 
 __all__ = [
+    "BlackBoxTechnique",
     "CoverageCriterion",
+    "CoverageItem",
     "OracleResult",
     "OracleStatus",
     "Priority",

@@ -135,11 +135,13 @@ docker-compose up --build
 - **TypeScript**: ESLint + Prettier, strict mode, 函数组件 + Hooks
 - **API Key**: 仅通过 `.env` 配置，禁止硬编码和提交
 
-## API 端点摘要（成员 D）
+## API 端点摘要
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/v1/whitebox/model` | 白盒建模：状态图 + 覆盖序列 + 用例 |
+| POST | `/api/v1/blackbox/generate/all` | 黑盒 EP+BVA+DT 全量生成（成员 C） |
+| POST | `/api/v1/blackbox/generate/with-coverage` | 黑盒生成 + 覆盖项报告 |
+| POST | `/api/v1/whitebox/model` | 白盒建模：状态图 + 覆盖序列 + 用例（成员 D） |
 | PUT | `/api/v1/whitebox/model/{id}` | 人工修订模型后重算覆盖 |
 | POST | `/api/v1/oracle/synthesize` | CoT 合成测试预言 |
 | PUT | `/api/v1/oracle/{id}/review` | 确认/驳回预言（`modified_by_user`） |
