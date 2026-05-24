@@ -26,7 +26,12 @@ class StateTransitionTuple(BaseModel):
 
     def transition_id(self) -> str:
         """Return a stable transition identifier for coverage tracking."""
-        return f"{self.state}--{self.event}-->{self.next_state}"
+        event_label = self.event
+        if self.guard:
+            event_label = f"{event_label}[{self.guard}]"
+        if self.action:
+            event_label = f"{event_label}/{self.action}"
+        return f"{self.state}--{event_label}-->{self.next_state}"
 
 
 class StateMachineModel(BaseModel):

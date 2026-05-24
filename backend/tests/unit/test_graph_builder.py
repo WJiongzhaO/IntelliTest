@@ -38,6 +38,34 @@ def test_duplicate_transition_raises() -> None:
         build_graph(model)
 
 
+def test_guarded_duplicate_events_are_valid_branches() -> None:
+    model = StateMachineModel(
+        initial_state="PendingPayment",
+        states=["PendingPayment", "PaymentCreated", "PaymentRejected"],
+        transitions=[
+            StateTransitionTuple(
+                state="PendingPayment",
+                event="clickPayNow",
+                guard="order is payable",
+                action="create payment flow",
+                next_state="PaymentCreated",
+            ),
+            StateTransitionTuple(
+                state="PendingPayment",
+                event="clickPayNow",
+                guard="order is cancelled or amount invalid",
+                action="show error",
+                next_state="PaymentRejected",
+            ),
+        ],
+        mermaid_diagram="",
+    )
+
+    graph = build_graph(model)
+
+    assert len(graph.outgoing("PendingPayment")) == 2
+
+
 def test_invalid_initial_state_raises() -> None:
     model = StateMachineModel(
         initial_state="Z",

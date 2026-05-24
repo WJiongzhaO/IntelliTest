@@ -24,7 +24,7 @@ function CsvUpload() {
     beforeUpload: async (file) => {
       const result = await addByCsv(file);
       if (result.length > 0) {
-        message.success(`Parsed ${result.length} requirements from CSV`);
+        message.success(`已从 CSV 解析 ${result.length} 条需求`);
       }
       return false;
     },
@@ -36,10 +36,8 @@ function CsvUpload() {
       <p className="ant-upload-drag-icon">
         <InboxOutlined />
       </p>
-      <p className="ant-upload-text">Click or drag a CSV file here</p>
-      <p className="ant-upload-hint">
-        The file should have a column containing requirement descriptions
-      </p>
+      <p className="ant-upload-text">点击或拖拽 CSV 文件到此处</p>
+      <p className="ant-upload-hint">CSV 中应包含需求描述列，系统会自动提取需求文本。</p>
     </Dragger>
   );
 }
@@ -52,7 +50,7 @@ function TextInput() {
     if (!text.trim()) return;
     const result = await addByText(text);
     if (result.length > 0) {
-      message.success(`Parsed ${result.length} requirements`);
+      message.success(`已解析 ${result.length} 条需求`);
       setText('');
     }
   };
@@ -64,12 +62,17 @@ function TextInput() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={
-          'Paste requirement text here.\n\nSeparate multiple requirements with blank lines, or use numbered items:\n1. First requirement\n2. Second requirement'
+          '在这里输入用户需求。\n\n多条需求可以用空行分隔，也可以使用编号：\n1. 第一条需求\n2. 第二条需求'
         }
         disabled={loading}
       />
-      <Button type="primary" onClick={handleSubmit} loading={loading} disabled={!text.trim()}>
-        Parse Requirements
+      <Button
+        type="primary"
+        onClick={handleSubmit}
+        loading={loading}
+        disabled={!text.trim()}
+      >
+        解析需求
       </Button>
     </Space>
   );
@@ -100,7 +103,7 @@ function ManualForm() {
     const payload = filled.map((e) => ({ raw_text: e.text.trim() }));
     const result = await addByForm(payload);
     if (result.length > 0) {
-      message.success(`Created ${result.length} requirements`);
+      message.success(`已创建 ${result.length} 条需求`);
       setEntries([{ key: Date.now(), text: '' }]);
     }
   };
@@ -113,7 +116,7 @@ function ManualForm() {
             style={{ flex: 1 }}
             value={entry.text}
             onChange={(e) => updateRow(entry.key, e.target.value)}
-            placeholder="Enter a single requirement description..."
+            placeholder="输入单条需求描述..."
             disabled={loading}
           />
           {entries.length > 1 && (
@@ -128,7 +131,7 @@ function ManualForm() {
       ))}
       <Space>
         <Button icon={<PlusOutlined />} onClick={addRow} disabled={loading}>
-          Add Requirement
+          添加一条
         </Button>
         <Button
           type="primary"
@@ -136,7 +139,7 @@ function ManualForm() {
           loading={loading}
           disabled={!entries.some((e) => e.text.trim())}
         >
-          Submit All
+          提交全部
         </Button>
       </Space>
     </Space>
@@ -145,14 +148,14 @@ function ManualForm() {
 
 export default function RequirementInputPanel() {
   const items = [
-    { key: 'csv', label: 'CSV Upload', children: <CsvUpload /> },
-    { key: 'text', label: 'Text Input', children: <TextInput /> },
-    { key: 'form', label: 'Manual Entry', children: <ManualForm /> },
+    { key: 'text', label: '文本输入', children: <TextInput /> },
+    { key: 'csv', label: 'CSV 导入', children: <CsvUpload /> },
+    { key: 'form', label: '逐条录入', children: <ManualForm /> },
   ];
 
   return (
-    <Card title="Import Requirements" style={{ marginBottom: 24 }}>
-      <Tabs items={items} />
+    <Card title="录入需求" style={{ marginBottom: 24 }}>
+      <Tabs items={items} defaultActiveKey="text" />
     </Card>
   );
 }

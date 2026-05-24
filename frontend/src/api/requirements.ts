@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { FormEntry, RequirementResponse } from '../types';
+import type { FormEntry, RequirementResponse, RiskAssessment } from '../types';
 
 export async function uploadCsv(file: File): Promise<RequirementResponse[]> {
   const formData = new FormData();
@@ -44,5 +44,10 @@ export async function deleteRequirement(id: string): Promise<void> {
 
 export async function structureRequirement(id: string): Promise<RequirementResponse> {
   const { data } = await apiClient.post(`/requirements/${id}/structure`);
+  return data;
+}
+
+export async function analyzeRequirementRisk(id: string): Promise<RiskAssessment> {
+  const { data } = await apiClient.post(`/requirements/${id}/risk`);
   return data;
 }

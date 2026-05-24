@@ -12,6 +12,7 @@ interface RequirementState {
   addByText: (text: string) => Promise<RequirementResponse[]>;
   addByForm: (entries: { raw_text: string }[]) => Promise<RequirementResponse[]>;
   structureOne: (id: string) => Promise<RequirementResponse | null>;
+  analyzeRisk: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
   clearError: () => void;
 }
@@ -27,7 +28,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       const data = await api.listRequirements();
       set({ requirements: data, loading: false });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch requirements';
+      const msg = err instanceof Error ? err.message : '需求列表获取失败';
       set({ error: msg, loading: false });
     }
   },
@@ -39,7 +40,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: [...created, ...get().requirements], loading: false });
       return created;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'CSV upload failed';
+      const msg = err instanceof Error ? err.message : 'CSV 导入失败';
       set({ error: msg, loading: false });
       return [];
     }
@@ -52,7 +53,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: [...created, ...get().requirements], loading: false });
       return created;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Text parsing failed';
+      const msg = err instanceof Error ? err.message : '文本解析失败';
       set({ error: msg, loading: false });
       return [];
     }
@@ -65,7 +66,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: [...created, ...get().requirements], loading: false });
       return created;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Form submission failed';
+      const msg = err instanceof Error ? err.message : '表单提交失败';
       set({ error: msg, loading: false });
       return [];
     }
@@ -79,9 +80,33 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: reqs, loading: false });
       return updated;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Structuring failed';
+      const msg = err instanceof Error ? err.message : '需求结构化失败';
       set({ error: msg, loading: false });
       return null;
+    }
+  },
+
+  analyzeRisk: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      const assessment = await api.analyzeRequirementRisk(id);
+      const reqs = get().requirements.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              risk_impact: assessment.impact,
+              risk_likelihood: assessment.likelihood,
+              risk_score: assessment.risk_score,
+              priority: assessment.priority,
+              risk_impact_rationale: assessment.impact_rationale,
+              risk_likelihood_rationale: assessment.likelihood_rationale,
+            }
+          : r,
+      );
+      set({ requirements: reqs, loading: false });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '风险分析失败';
+      set({ error: msg, loading: false });
     }
   },
 
@@ -90,7 +115,7 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       await api.deleteRequirement(id);
       set({ requirements: get().requirements.filter((r) => r.id !== id) });
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Delete failed';
+      const msg = err instanceof Error ? err.message : '删除失败';
       set({ error: msg });
     }
   },

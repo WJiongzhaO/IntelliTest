@@ -32,8 +32,7 @@ def build_graph(model: StateMachineModel) -> StateGraph:
         )
 
     state_set = set(model.states)
-    seen_edges: set[tuple[str, str, str]] = set()
-    seen_event_keys: set[tuple[str, str]] = set()
+    seen_edges: set[tuple[str, str, str, str, str]] = set()
     adjacency: dict[str, list[StateTransitionTuple]] = defaultdict(list)
 
     for transition in model.transitions:
@@ -42,15 +41,16 @@ def build_graph(model: StateMachineModel) -> StateGraph:
         if transition.next_state not in state_set:
             raise WhiteboxModelError(f"Unknown target state: {transition.next_state}")
 
-        edge_key = (transition.state, transition.event, transition.next_state)
+        edge_key = (
+            transition.state,
+            transition.event,
+            transition.guard or "",
+            transition.action or "",
+            transition.next_state,
+        )
         if edge_key in seen_edges:
             raise WhiteboxModelError(f"Duplicate transition edge: {edge_key}")
         seen_edges.add(edge_key)
-
-        event_key = (transition.state, transition.event)
-        if event_key in seen_event_keys:
-            raise WhiteboxModelError(f"Duplicate event from state: {event_key}")
-        seen_event_keys.add(event_key)
 
         adjacency[transition.state].append(transition)
 
@@ -106,10 +106,19 @@ def _bfs_states(graph: StateGraph, start: str) -> set[str]:
 
 def shortest_path_events(graph: StateGraph, start: str, goal: str) -> list[str]:
     """BFS shortest event sequence from start to goal state."""
+    return [transition.event for transition in shortest_path_transitions(graph, start, goal)]
+
+
+def shortest_path_transitions(
+    graph: StateGraph,
+    start: str,
+    goal: str,
+) -> list[StateTransitionTuple]:
+    """BFS shortest transition sequence from start to goal state."""
     if start == goal:
         return []
 
-    parent: dict[str, tuple[str, str]] = {}
+    parent: dict[str, tuple[str, StateTransitionTuple]] = {}
     queue: deque[str] = deque([start])
     visited = {start}
 
@@ -119,25 +128,25 @@ def shortest_path_events(graph: StateGraph, start: str, goal: str) -> list[str]:
             nxt = transition.next_state
             if nxt in visited:
                 continue
-            parent[nxt] = (current, transition.event)
+            parent[nxt] = (current, transition)
             if nxt == goal:
-                return _reconstruct_events(parent, start, goal)
+                return _reconstruct_transitions(parent, start, goal)
             visited.add(nxt)
             queue.append(nxt)
 
     raise WhiteboxModelError(f"No path from '{start}' to '{goal}'")
 
 
-def _reconstruct_events(
-    parent: dict[str, tuple[str, str]],
+def _reconstruct_transitions(
+    parent: dict[str, tuple[str, StateTransitionTuple]],
     start: str,
     goal: str,
-) -> list[str]:
-    events: list[str] = []
+) -> list[StateTransitionTuple]:
+    transitions: list[StateTransitionTuple] = []
     node = goal
     while node != start:
-        prev, event = parent[node]
-        events.append(event)
+        prev, transition = parent[node]
+        transitions.append(transition)
         node = prev
-    events.reverse()
-    return events
+    transitions.reverse()
+    return transitions

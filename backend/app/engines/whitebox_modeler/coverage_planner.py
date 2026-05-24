@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from app.engines.whitebox_modeler.graph_builder import StateGraph, shortest_path_events
+from app.engines.whitebox_modeler.graph_builder import (
+    StateGraph,
+    shortest_path_events,
+    shortest_path_transitions,
+)
 from app.models.state_machine import CoverageCriterion, TestSequence
 from app.utils.logger import setup_logger
 
@@ -82,14 +86,13 @@ def _plan_all_states(graph: StateGraph) -> list[PlannedPath]:
                 break
 
             target = min(uncovered, key=str)
-            prefix_events = shortest_path_events(graph, current_state, target)
-            if not prefix_events:
+            prefix_transitions = shortest_path_transitions(graph, current_state, target)
+            if not prefix_transitions:
                 break
 
             walk_state = current_state
-            for event in prefix_events:
-                transition = _find_transition(graph, walk_state, event)
-                event_steps.append(event)
+            for transition in prefix_transitions:
+                event_steps.append(transition.event)
                 walk_state = transition.next_state
                 state_path.append(walk_state)
                 if walk_state in uncovered:
@@ -97,7 +100,7 @@ def _plan_all_states(graph: StateGraph) -> list[PlannedPath]:
                     uncovered.remove(walk_state)
                 current_state = walk_state
 
-            if not progressed and prefix_events:
+            if not progressed and prefix_transitions:
                 continue
             break
 
@@ -149,12 +152,11 @@ def _plan_all_transitions(graph: StateGraph) -> list[PlannedPath]:
             if candidate is None:
                 break
 
-            prefix = shortest_path_events(graph, current_state, candidate.state)
+            prefix = shortest_path_transitions(graph, current_state, candidate.state)
             walk = current_state
-            for event in prefix:
-                tr = _find_transition(graph, walk, event)
-                event_steps.append(event)
-                walk = tr.next_state
+            for transition in prefix:
+                event_steps.append(transition.event)
+                walk = transition.next_state
                 state_path.append(walk)
             current_state = walk
 
@@ -219,15 +221,4 @@ def _nearest_uncovered_transition(
             return transition
         except Exception:
             continue
-    if uncovered:
-        return id_to_transition[sorted(uncovered)[0]]
     return None
-
-
-def _find_transition(graph: StateGraph, state: str, event: str):
-    from app.exceptions import WhiteboxModelError
-
-    for transition in graph.outgoing(state):
-        if transition.event == event:
-            return transition
-    raise WhiteboxModelError(f"No transition for state={state} event={event}")

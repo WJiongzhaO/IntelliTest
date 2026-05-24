@@ -47,3 +47,37 @@ def test_all_states_sequence_count_reasonable() -> None:
     graph = build_graph(_triangle_graph())
     paths = plan_sequences(graph, CoverageCriterion.ALL_STATES)
     assert 1 <= len(paths) <= 3
+
+
+def test_all_transitions_distinguishes_guarded_duplicate_events() -> None:
+    model = StateMachineModel(
+        initial_state="PendingPayment",
+        states=["PendingPayment", "PaymentCreated", "PaymentRejected"],
+        transitions=[
+            StateTransitionTuple(
+                state="PendingPayment",
+                event="clickPayNow",
+                guard="order is payable",
+                action="create payment flow",
+                next_state="PaymentCreated",
+            ),
+            StateTransitionTuple(
+                state="PendingPayment",
+                event="clickPayNow",
+                guard="order is cancelled or amount invalid",
+                action="show error",
+                next_state="PaymentRejected",
+            ),
+        ],
+        mermaid_diagram="",
+    )
+
+    graph = build_graph(model)
+    paths = plan_sequences(graph, CoverageCriterion.ALL_TRANSITIONS)
+    covered = {item for path in paths for item in path.covered_items}
+
+    assert "PendingPayment--clickPayNow[order is payable]/create payment flow-->PaymentCreated" in covered
+    assert (
+        "PendingPayment--clickPayNow[order is cancelled or amount invalid]/show error-->PaymentRejected"
+        in covered
+    )

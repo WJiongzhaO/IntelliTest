@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.engines.workflow.test_design_pipeline import run_combined_pipeline
+from app.exceptions import WhiteboxModelError
 from app.models.requirement import StructuredRequirement
 from app.models.state_machine import CoverageCriterion
 from app.models.test_case import TestCase, TestSuite
@@ -43,14 +44,18 @@ async def combined_design(
         inline=body.requirement,
     )
 
-    suite = run_combined_pipeline(
-        requirement,
-        techniques=body.techniques,
-        coverage=body.coverage,
-        synthesize_oracles=body.synthesize_oracles,
-        blackbox_cases=body.blackbox_cases or None,
-        use_llm=body.use_llm,
-    )
+    try:
+        suite = run_combined_pipeline(
+            requirement,
+            techniques=body.techniques,
+            coverage=body.coverage,
+            synthesize_oracles=body.synthesize_oracles,
+            blackbox_cases=body.blackbox_cases or None,
+            use_llm=body.use_llm,
+        )
+    except WhiteboxModelError as exc:
+        status_code = 502 if body.use_llm else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     store.last_suite_id = suite.id
     for case in suite.test_cases:
         store.test_cases[case.id] = case

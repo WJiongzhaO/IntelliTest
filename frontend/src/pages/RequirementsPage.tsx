@@ -10,7 +10,7 @@ export default function RequirementsPage() {
     <Space direction="vertical" style={{ width: '100%' }} size="large">
       {error && (
         <Alert
-          message="Error"
+          message="错误"
           description={error}
           type="error"
           closable
