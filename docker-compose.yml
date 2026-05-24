@@ -4,8 +4,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       args:
-        # DaoCloud mirror when docker.io/auth.docker.io times out
-        PYTHON_IMAGE: docker.m.daocloud.io/library/python:3.12-slim
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
     container_name: intellitest-backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
@@ -33,12 +32,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NODE_IMAGE: docker.m.daocloud.io/library/node:20-alpine
+        NODE_IMAGE: ${NODE_IMAGE:-node:20-alpine}
     container_name: intellitest-frontend
     ports:
       - "3000:3000"
-    env_file:
-      - ./backend/.env
     environment:
       API_PROXY_TARGET: http://backend:8000
     volumes:

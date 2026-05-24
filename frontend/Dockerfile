@@ -4,9 +4,9 @@ FROM ${NODE_IMAGE}
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package*.json ./
 RUN npm config set registry https://registry.npmmirror.com \
-    && npm install
+    && npm ci
 
 COPY . .
 

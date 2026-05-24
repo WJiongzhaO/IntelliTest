@@ -1,0 +1,13 @@
+.git/
+.venv/
+frontend/node_modules/
+frontend/dist/
+backend/.env
+backend/.env.*
+backend/app.db
+backend/*.db
+backend/__pycache__/
+backend/.pytest_cache/
+.codex_export_check/
+.codex_export_check_latest/
+.docker-cli-config/

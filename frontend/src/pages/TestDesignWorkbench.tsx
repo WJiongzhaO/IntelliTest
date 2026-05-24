@@ -26,10 +26,15 @@ import { toStructuredRequirement } from '../utils/requirementMapper';
 const { Title, Text } = Typography;
 
 const TECH_OPTIONS = [
-  { label: 'EP (C)', value: 'EP' },
-  { label: 'BVA (C)', value: 'BVA' },
-  { label: 'DT (C)', value: 'DT' },
-  { label: 'StateTransition (D)', value: 'StateTransition' },
+  { label: '等价类划分（EP）', value: 'EP' },
+  { label: '边界值分析（BVA）', value: 'BVA' },
+  { label: '判定表（DT）', value: 'DT' },
+  { label: '状态转换', value: 'StateTransition' },
+];
+
+const coverageOptions = [
+  { value: 'ALL_STATES', label: '全部状态' },
+  { value: 'ALL_TRANSITIONS', label: '全部转换' },
 ];
 
 const SUITE_STORAGE_KEY = 'intellitest_last_suite';
@@ -54,14 +59,14 @@ function TestDesignWorkbench() {
           if (first) setSelectedId(first.id);
         }
       } catch {
-        message.error('Failed to load requirements — complete Structure step first');
+        message.error('需求加载失败，请先完成结构化步骤');
       }
     })();
   }, [selectedId]);
 
   const handleRun = async () => {
     if (!selectedId) {
-      message.warning('Select a structured requirement');
+      message.warning('请选择一条已结构化的需求');
       return;
     }
     const row = rows.find((r) => r.id === selectedId);
@@ -79,84 +84,81 @@ function TestDesignWorkbench() {
       });
       setSuite(result);
       sessionStorage.setItem(SUITE_STORAGE_KEY, JSON.stringify(result));
-      message.success(`Suite ${result.id}: ${result.test_cases.length} cases`);
+      message.success(`测试套件 ${result.id} 已生成，共 ${result.test_cases.length} 条用例`);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Pipeline failed');
+      message.error(err instanceof Error ? err.message : '综合流程执行失败');
     } finally {
       setLoading(false);
     }
   };
 
   const columns = [
-    { title: 'ID', dataIndex: 'id', width: 120 },
-    { title: 'Title', dataIndex: 'title', ellipsis: true },
+    { title: '编号', dataIndex: 'id', width: 120 },
+    { title: '标题', dataIndex: 'title', ellipsis: true },
     {
-      title: 'Technique',
+      title: '方法',
       dataIndex: 'technique',
       render: (t: string) => <Tag>{t}</Tag>,
     },
     {
-      title: 'Expected',
+      title: '预期结果',
       dataIndex: 'expected_result',
       ellipsis: true,
-      render: (v: string | undefined) => v ?? <Text type="secondary">—</Text>,
+      render: (v: string | undefined) => v ?? <Text type="secondary">-</Text>,
     },
   ];
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Title level={3}>Combined Test Design (C + D)</Title>
+      <Title level={3}>综合测试设计</Title>
       <Alert
         type="info"
         showIcon
-        message="Workflow: Requirements (A) → Structure → Risk (B) → run pipeline here → Oracle Editor for review."
+        message="推荐流程：录入需求 → 结构化 → 风险分析 → 生成测试套件 → 测试预言审查。"
       />
 
-      <Card title="Pipeline options">
+      <Card title="生成选项">
         <Form layout="vertical">
-          <Form.Item label="Structured requirement">
+          <Form.Item label="已结构化需求">
             <Select
               value={selectedId ?? undefined}
               onChange={setSelectedId}
               options={rows.map((r) => ({
                 value: r.id,
-                label: `${r.id} (risk=${r.risk_score ?? '—'})`,
+                label: `${r.id}（风险=${r.risk_score ?? '-'}）`,
               }))}
-              placeholder="Select from Requirements page"
+              placeholder="从需求列表中选择"
             />
           </Form.Item>
-          <Form.Item label="Techniques">
+          <Form.Item label="测试设计方法">
             <Checkbox.Group
               options={TECH_OPTIONS}
               value={techniques}
               onChange={(v) => setTechniques(v as string[])}
             />
           </Form.Item>
-          <Form.Item label="Whitebox coverage">
+          <Form.Item label="白盒覆盖准则">
             <Select<CoverageCriterion>
               value={coverage}
               onChange={setCoverage}
-              options={[
-                { value: 'ALL_STATES', label: 'All States' },
-                { value: 'ALL_TRANSITIONS', label: 'All Transitions' },
-              ]}
+              options={coverageOptions}
             />
           </Form.Item>
           <Space>
-            <Switch checked={useLlm} onChange={setUseLlm} /> Use LLM (needs API key)
+            <Switch checked={useLlm} onChange={setUseLlm} /> 使用大模型抽取
           </Space>
           <Space>
             <Switch checked={synthesizeOracles} onChange={setSynthesizeOracles} />
-            Synthesize oracles (FR 5.0)
+            同步生成测试预言
           </Space>
           <Button type="primary" loading={loading} onClick={() => void handleRun()}>
-            Run combined pipeline
+            运行综合流程
           </Button>
         </Form>
       </Card>
 
       {suite && (
-        <Card title={`Suite ${suite.id} (${suite.test_cases.length} cases)`}>
+        <Card title={`测试套件 ${suite.id}（${suite.test_cases.length} 条用例）`}>
           <Table<TestCase>
             rowKey="id"
             dataSource={suite.test_cases}

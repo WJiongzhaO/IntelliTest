@@ -8,6 +8,7 @@ from typing import Sequence
 from app.engines.blackbox_generator import BlackBoxTestGenerator
 from app.engines.oracle_synthesizer.synthesizer import DefaultOracleSynthesizer
 from app.engines.whitebox_modeler.generator import DefaultStateModelGenerator
+from app.exceptions import WhiteboxModelError
 from app.models.requirement import StructuredRequirement
 from app.models.state_machine import CoverageCriterion
 from app.models.test_case import BlackBoxTechnique, Priority, TestCase, TestSuite
@@ -44,11 +45,24 @@ def run_combined_pipeline(
 
     if "StateTransition" in techniques:
         generator = DefaultStateModelGenerator()
-        _, _, state_cases = generator.generate(
-            requirement,
-            coverage=coverage,
-            use_llm=use_llm,
-        )
+        try:
+            _, _, state_cases = generator.generate(
+                requirement,
+                coverage=coverage,
+                use_llm=use_llm,
+            )
+        except WhiteboxModelError as exc:
+            if not use_llm:
+                raise
+            logger.warning(
+                "LLM state model failed, falling back to rule-based model: %s",
+                exc,
+            )
+            _, _, state_cases = generator.generate(
+                requirement,
+                coverage=coverage,
+                use_llm=False,
+            )
         for case in state_cases:
             _upsert_case(merged, case)
 

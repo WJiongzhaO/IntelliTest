@@ -24,22 +24,28 @@ import { reviewOracle, synthesizeOracles, validateOracle } from '../api/oracle';
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
+const statusLabels: Record<string, string> = {
+  pending_review: '待审查',
+  confirmed: '已确认',
+  rejected: '已拒绝',
+};
+
 const sampleRequirement = (): StructuredRequirement => ({
   id: 'req-oracle-1',
-  raw_text: 'User logs in with valid credentials and sees the dashboard.',
-  input_fields: ['username', 'password'],
+  raw_text: '用户使用有效账号密码登录后可以看到系统首页。',
+  input_fields: ['用户名', '密码'],
   data_ranges: [],
-  conditions: ['valid credentials'],
-  expected_actions: ['authenticate user', 'show dashboard'],
+  conditions: ['账号密码有效'],
+  expected_actions: ['认证用户', '展示系统首页'],
 });
 
 const sampleCase = (): TestCase => ({
   id: 'tc-oracle-1',
   requirement_id: 'req-oracle-1',
-  title: 'Valid login path',
-  precondition: 'System in LoggedOut state',
-  test_steps: ['State: LoggedOut', 'State: Active'],
-  test_data: 'login, valid credentials',
+  title: '有效登录路径',
+  precondition: '系统处于未登录状态',
+  test_steps: ['状态：未登录', '状态：已登录'],
+  test_data: '登录，有效账号密码',
   technique: 'StateTransition',
   priority: 'Medium',
   coverage_items: ['LoggedOut--login-->Active'],
@@ -68,7 +74,7 @@ function OracleEditor() {
         );
       }
     } catch {
-      /* ignore */
+      /* 忽略无效的会话数据 */
     }
   }, []);
 
@@ -83,9 +89,9 @@ function OracleEditor() {
       const first = oracles[0] ?? null;
       setOracle(first);
       setExpectedEdit(first?.expected_result ?? '');
-      message.success('Oracle synthesized');
+      message.success('测试预言已生成');
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Synthesis failed');
+      message.error(err instanceof Error ? err.message : '生成失败');
     } finally {
       setLoading(false);
     }
@@ -101,9 +107,9 @@ function OracleEditor() {
         expected_result: expectedEdit,
       });
       setOracle(result);
-      message.info('Validation complete');
+      message.info('校验完成');
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Validation failed');
+      message.error(err instanceof Error ? err.message : '校验失败');
     } finally {
       setLoading(false);
     }
@@ -119,9 +125,9 @@ function OracleEditor() {
         sync_test_case: true,
       });
       setOracle(updated);
-      message.success(action === 'confirm' ? 'Oracle confirmed' : 'Oracle rejected');
+      message.success(action === 'confirm' ? '测试预言已确认' : '测试预言已拒绝');
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Review failed');
+      message.error(err instanceof Error ? err.message : '审查失败');
     } finally {
       setLoading(false);
     }
@@ -129,19 +135,19 @@ function OracleEditor() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Title level={3}>Oracle Editor (FR 5.0)</Title>
+      <Title level={3}>测试预言编辑</Title>
 
       <Row gutter={16}>
         <Col xs={24} lg={12}>
-          <Card title="Test Case">
+          <Card title="测试用例">
             <Form layout="vertical">
               {suiteCases.length > 0 && (
-                <Form.Item label="From combined suite">
+                <Form.Item label="从测试套件选择">
                   <Select
                     value={testCase.id}
                     options={suiteCases.map((c) => ({
                       value: c.id,
-                      label: `${c.id} (${c.technique})`,
+                      label: `${c.id}（${c.technique}）`,
                     }))}
                     onChange={(id) => {
                       const picked = suiteCases.find((c) => c.id === id);
@@ -153,22 +159,22 @@ function OracleEditor() {
                   />
                 </Form.Item>
               )}
-              <Form.Item label="Use LLM (CoT)">
+              <Form.Item label="使用大模型推理">
                 <Switch checked={useLlm} onChange={setUseLlm} />
               </Form.Item>
-              <Form.Item label="Title">
+              <Form.Item label="标题">
                 <Input
                   value={testCase.title}
                   onChange={(e) => setTestCase({ ...testCase, title: e.target.value })}
                 />
               </Form.Item>
-              <Form.Item label="Precondition">
+              <Form.Item label="前置条件">
                 <Input
                   value={testCase.precondition}
                   onChange={(e) => setTestCase({ ...testCase, precondition: e.target.value })}
                 />
               </Form.Item>
-              <Form.Item label="Test Steps (one per line)">
+              <Form.Item label="测试步骤（每行一步）">
                 <TextArea
                   rows={4}
                   value={testCase.test_steps.join('\n')}
@@ -180,7 +186,7 @@ function OracleEditor() {
                   }
                 />
               </Form.Item>
-              <Form.Item label="Test Data">
+              <Form.Item label="测试数据">
                 <Input
                   value={testCase.test_data}
                   onChange={(e) => setTestCase({ ...testCase, test_data: e.target.value })}
@@ -191,13 +197,13 @@ function OracleEditor() {
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title="CoT Reasoning & Expected Result">
+          <Card title="推理过程与预期结果">
             {oracle && !oracle.consistent_with_requirement && (
               <Alert
                 type="warning"
                 showIcon
                 style={{ marginBottom: 12 }}
-                message="Consistency issues"
+                message="一致性问题"
                 description={
                   <List
                     size="small"
@@ -208,12 +214,12 @@ function OracleEditor() {
               />
             )}
 
-            <Text strong>Reasoning steps</Text>
+            <Text strong>推理步骤</Text>
             <List
               size="small"
               style={{ marginBottom: 12 }}
               dataSource={oracle?.reasoning_steps ?? []}
-              locale={{ emptyText: 'Run synthesis to generate CoT steps' }}
+              locale={{ emptyText: '请先生成测试预言' }}
               renderItem={(item, index) => (
                 <List.Item>
                   {index + 1}. {item}
@@ -221,7 +227,7 @@ function OracleEditor() {
               )}
             />
 
-            <Form.Item label="Expected Result">
+            <Form.Item label="预期结果">
               <TextArea
                 rows={4}
                 value={expectedEdit}
@@ -232,10 +238,10 @@ function OracleEditor() {
             {oracle && (
               <Space wrap>
                 <Tag color={oracle.consistent_with_requirement ? 'green' : 'orange'}>
-                  {oracle.consistent_with_requirement ? 'Consistent' : 'Review needed'}
+                  {oracle.consistent_with_requirement ? '一致' : '需要审查'}
                 </Tag>
-                <Tag>{oracle.status}</Tag>
-                {oracle.modified_by_user && <Tag color="blue">User modified</Tag>}
+                <Tag>{statusLabels[oracle.status] ?? oracle.status}</Tag>
+                {oracle.modified_by_user && <Tag color="blue">已人工修改</Tag>}
               </Space>
             )}
           </Card>
@@ -245,22 +251,20 @@ function OracleEditor() {
       <Card>
         <Space wrap>
           <Button type="primary" loading={loading} onClick={() => void handleSynthesize()}>
-            Synthesize Oracle
+            生成测试预言
           </Button>
           <Button loading={loading} onClick={() => void handleValidate()}>
-            Validate Only
+            仅校验
           </Button>
           <Button loading={loading} disabled={!oracle} onClick={() => void handleReview('confirm')}>
-            Confirm
+            确认
           </Button>
           <Button danger loading={loading} disabled={!oracle} onClick={() => void handleReview('reject')}>
-            Reject
+            拒绝
           </Button>
         </Space>
         <div style={{ marginTop: 12 }}>
-          <Text type="secondary">
-            Requirement raw text can be edited for member E integration — id: {requirement.id}
-          </Text>
+          <Text type="secondary">需求原文，编号：{requirement.id}</Text>
           <TextArea
             style={{ marginTop: 8 }}
             rows={2}

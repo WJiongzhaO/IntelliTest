@@ -35,6 +35,8 @@ pnpm-debug.log*
 # Build output
 frontend/dist/
 frontend/build/
+frontend/vite.config.js
+frontend/vite.config.d.ts
 *.tsbuildinfo
 
 # ===================== IDE / Editor =====================
@@ -64,7 +66,12 @@ db.*.sqlite3
 
 # ===================== Docker =====================
 .docker/
+.docker-cli-config/
 docker-compose.override.yml
+
+# ===================== Local verification artifacts =====================
+.codex_export_check/
+.codex_export_check_latest/
 
 # ===================== Logs =====================
 *.log

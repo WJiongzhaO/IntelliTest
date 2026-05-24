@@ -38,11 +38,11 @@ const { Title, Text } = Typography;
 
 const defaultRequirement = (): StructuredRequirement => ({
   id: `req-${Date.now()}`,
-  raw_text: 'User logs in with valid credentials; session becomes active. On logout, session ends.',
-  input_fields: ['username', 'password'],
+  raw_text: '用户使用有效账号密码登录后进入系统；用户退出登录后会话结束。',
+  input_fields: ['用户名', '密码'],
   data_ranges: [],
-  conditions: ['credentials valid', 'user clicks logout'],
-  expected_actions: ['authenticate user', 'show dashboard', 'clear session'],
+  conditions: ['账号密码有效', '用户点击退出登录'],
+  expected_actions: ['认证用户', '展示系统首页', '清除会话'],
 });
 
 function WhiteboxWorkbench() {
@@ -65,7 +65,7 @@ function WhiteboxWorkbench() {
       const { svg } = await mermaid.render(`wb-${diagramId}`, mermaidText);
       diagramRef.current.innerHTML = svg;
     } catch {
-      diagramRef.current.innerHTML = '<p>Invalid Mermaid syntax</p>';
+      diagramRef.current.innerHTML = '<p>Mermaid 语法无效</p>';
     }
   }, [diagramId, mermaidText]);
 
@@ -97,9 +97,9 @@ function WhiteboxWorkbench() {
       setSequences(response.sequences);
       setTestCases(response.test_cases);
       setMermaidText(response.model.mermaid_diagram);
-      message.success('Whitebox model generated');
+      message.success('白盒状态模型已生成');
     } catch (err) {
-      const detail = err instanceof Error ? err.message : 'Generation failed';
+      const detail = err instanceof Error ? err.message : '生成失败';
       setError(detail);
       message.error(detail);
     } finally {
@@ -128,9 +128,9 @@ function WhiteboxWorkbench() {
       setModel(response.model);
       setSequences(response.sequences);
       setTestCases(response.test_cases);
-      message.success('Model updated and sequences replanned');
+      message.success('模型已更新，覆盖序列已重新规划');
     } catch (err) {
-      message.error(err instanceof Error ? err.message : 'Update failed');
+      message.error(err instanceof Error ? err.message : '更新失败');
     } finally {
       setLoading(false);
     }
@@ -139,15 +139,15 @@ function WhiteboxWorkbench() {
   const coveredItems = new Set(testCases.flatMap((tc) => tc.coverage_items));
 
   const caseColumns: ColumnsType<TestCase> = [
-    { title: 'ID', dataIndex: 'id', width: 120 },
-    { title: 'Title', dataIndex: 'title' },
+    { title: '编号', dataIndex: 'id', width: 120 },
+    { title: '标题', dataIndex: 'title' },
     {
-      title: 'Steps',
+      title: '步骤',
       dataIndex: 'test_steps',
       render: (steps: string[]) => steps.join(' → '),
     },
     {
-      title: 'Coverage',
+      title: '覆盖项',
       dataIndex: 'coverage_items',
       render: (items: string[]) => items.map((item) => <Tag key={item}>{item}</Tag>),
     },
@@ -155,15 +155,15 @@ function WhiteboxWorkbench() {
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Title level={3}>Whitebox Modeling (FR 4.0)</Title>
+      <Title level={3}>白盒建模</Title>
       {error && <Alert type="error" message={error} showIcon />}
 
-      <Card title="Structured Requirement">
+      <Card title="结构化需求">
         <Form layout="vertical">
-          <Form.Item label="Load from Requirements (A/B)">
+          <Form.Item label="从需求列表加载">
             <Select
               allowClear
-              placeholder="Pick structured requirement"
+              placeholder="选择已结构化需求"
               options={dbRows.map((r) => ({ value: r.id, label: r.id }))}
               onChange={(id) => {
                 const row = dbRows.find((r) => r.id === id);
@@ -171,16 +171,16 @@ function WhiteboxWorkbench() {
               }}
             />
           </Form.Item>
-          <Form.Item label="Use LLM extraction">
+          <Form.Item label="使用大模型抽取">
             <Switch checked={useLlm} onChange={setUseLlm} />
           </Form.Item>
-          <Form.Item label="Requirement ID">
+          <Form.Item label="需求编号">
             <Input
               value={requirement.id}
               onChange={(e) => setRequirement({ ...requirement, id: e.target.value })}
             />
           </Form.Item>
-          <Form.Item label="Raw Text">
+          <Form.Item label="需求原文">
             <TextArea
               rows={3}
               value={requirement.raw_text}
@@ -189,20 +189,20 @@ function WhiteboxWorkbench() {
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Coverage Criterion">
+              <Form.Item label="覆盖准则">
                 <Select<CoverageCriterion>
                   value={coverage}
                   onChange={setCoverage}
                   options={[
-                    { value: 'ALL_STATES', label: 'All States' },
-                    { value: 'ALL_TRANSITIONS', label: 'All Transitions' },
+                    { value: 'ALL_STATES', label: '全部状态' },
+                    { value: 'ALL_TRANSITIONS', label: '全部转换' },
                   ]}
                 />
               </Form.Item>
             </Col>
             <Col span={12} style={{ display: 'flex', alignItems: 'flex-end' }}>
               <Button type="primary" loading={loading} onClick={() => void handleGenerate()}>
-                Generate State Model
+                生成状态模型
               </Button>
             </Col>
           </Row>
@@ -211,37 +211,37 @@ function WhiteboxWorkbench() {
 
       {model && (
         <>
-          <Card title="State Diagram (Mermaid)">
+          <Card title="状态图（Mermaid）">
             <div ref={diagramRef} style={{ marginBottom: 16, overflow: 'auto' }} />
             <TextArea rows={6} value={mermaidText} onChange={(e) => setMermaidText(e.target.value)} />
             <Button style={{ marginTop: 8 }} onClick={() => void handleMermaidApply()}>
-              Apply Mermaid & Replan
+              应用图并重新规划
             </Button>
           </Card>
 
-          <Card title="Coverage Items">
+          <Card title="覆盖项">
             {Array.from(coveredItems).map((item) => (
               <Tag key={item} color="blue">
                 {item}
               </Tag>
             ))}
-            {!coveredItems.size && <Text type="secondary">No coverage items yet</Text>}
+            {!coveredItems.size && <Text type="secondary">暂无覆盖项</Text>}
           </Card>
 
-          <Card title="Test Sequences">
+          <Card title="测试序列">
             <Table
               rowKey="sequence_id"
               dataSource={sequences}
               pagination={false}
               columns={[
-                { title: 'Sequence', dataIndex: 'sequence_id' },
+                { title: '序列', dataIndex: 'sequence_id' },
                 {
-                  title: 'Steps',
+                  title: '步骤',
                   dataIndex: 'steps',
-                  render: (steps: string[]) => steps.join(', ') || '(initial only)',
+                  render: (steps: string[]) => steps.join(', ') || '仅初始状态',
                 },
                 {
-                  title: 'Covered',
+                  title: '已覆盖',
                   dataIndex: 'covered_items',
                   render: (items: string[]) => items.map((i) => <Tag key={i}>{i}</Tag>),
                 },
@@ -249,7 +249,7 @@ function WhiteboxWorkbench() {
             />
           </Card>
 
-          <Card title="Derived Test Cases">
+          <Card title="派生测试用例">
             <Table rowKey="id" dataSource={testCases} columns={caseColumns} pagination={false} />
           </Card>
         </>
