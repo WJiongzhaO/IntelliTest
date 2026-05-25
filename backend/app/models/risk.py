@@ -9,6 +9,9 @@ class RiskAssessment(BaseModel):
     """Per-requirement risk output persisted and returned by APIs."""
 
     requirement_id: str = Field(description="Requirement identifier")
+    requirement_title: Optional[str] = Field(
+        default=None, description="Human-readable requirement title"
+    )
     impact: int = Field(ge=1, le=5, description="Impact rating 1–5")
     likelihood: int = Field(ge=1, le=5, description="Likelihood rating 1–5")
     risk_score: int = Field(ge=1, le=25, description="Impact × Likelihood")

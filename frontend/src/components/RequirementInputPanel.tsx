@@ -9,7 +9,7 @@ import {
   Upload,
   type UploadProps,
 } from 'antd';
-import { InboxOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
 import { useRequirementStore } from '../stores/requirementStore';
 
 const { Dragger } = Upload;
@@ -37,26 +37,36 @@ function CsvUpload() {
         <InboxOutlined />
       </p>
       <p className="ant-upload-text">点击或拖拽 CSV 文件到此处</p>
-      <p className="ant-upload-hint">CSV 中应包含需求描述列，系统会自动提取需求文本。</p>
+      <p className="ant-upload-hint">
+        CSV 可包含 title/name/需求名 列和 requirement/description/需求描述列。
+      </p>
     </Dragger>
   );
 }
 
 function TextInput() {
   const { addByText, loading } = useRequirementStore();
+  const [title, setTitle] = useState('');
   const [text, setText] = useState('');
 
   const handleSubmit = async () => {
-    if (!text.trim()) return;
-    const result = await addByText(text);
+    if (!title.trim() || !text.trim()) return;
+    const result = await addByText(text, title.trim());
     if (result.length > 0) {
       message.success(`已解析 ${result.length} 条需求`);
+      setTitle('');
       setText('');
     }
   };
 
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
+      <Input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="需求名（必填）"
+        disabled={loading}
+      />
       <TextArea
         rows={8}
         value={text}
@@ -70,7 +80,7 @@ function TextInput() {
         type="primary"
         onClick={handleSubmit}
         loading={loading}
-        disabled={!text.trim()}
+        disabled={!title.trim() || !text.trim()}
       >
         解析需求
       </Button>
@@ -80,12 +90,12 @@ function TextInput() {
 
 function ManualForm() {
   const { addByForm, loading } = useRequirementStore();
-  const [entries, setEntries] = useState<{ key: number; text: string }[]>([
-    { key: 0, text: '' },
+  const [entries, setEntries] = useState<{ key: number; title: string; text: string }[]>([
+    { key: 0, title: '', text: '' },
   ]);
 
   const addRow = () => {
-    setEntries([...entries, { key: Date.now(), text: '' }]);
+    setEntries([...entries, { key: Date.now(), title: '', text: '' }]);
   };
 
   const removeRow = (key: number) => {
@@ -93,18 +103,21 @@ function ManualForm() {
     setEntries(entries.filter((e) => e.key !== key));
   };
 
-  const updateRow = (key: number, value: string) => {
-    setEntries(entries.map((e) => (e.key === key ? { ...e, text: value } : e)));
+  const updateRow = (key: number, patch: Partial<{ title: string; text: string }>) => {
+    setEntries(entries.map((e) => (e.key === key ? { ...e, ...patch } : e)));
   };
 
   const handleSubmit = async () => {
-    const filled = entries.filter((e) => e.text.trim());
+    const filled = entries.filter((e) => e.title.trim() && e.text.trim());
     if (filled.length === 0) return;
-    const payload = filled.map((e) => ({ raw_text: e.text.trim() }));
+    const payload = filled.map((e) => ({
+      title: e.title.trim(),
+      raw_text: e.text.trim(),
+    }));
     const result = await addByForm(payload);
     if (result.length > 0) {
       message.success(`已创建 ${result.length} 条需求`);
-      setEntries([{ key: Date.now(), text: '' }]);
+      setEntries([{ key: Date.now(), title: '', text: '' }]);
     }
   };
 
@@ -113,9 +126,16 @@ function ManualForm() {
       {entries.map((entry) => (
         <Space key={entry.key} style={{ display: 'flex', width: '100%' }} align="start">
           <Input
+            style={{ width: 220 }}
+            value={entry.title}
+            onChange={(e) => updateRow(entry.key, { title: e.target.value })}
+            placeholder="需求名（必填）"
+            disabled={loading}
+          />
+          <Input
             style={{ flex: 1 }}
             value={entry.text}
-            onChange={(e) => updateRow(entry.key, e.target.value)}
+            onChange={(e) => updateRow(entry.key, { text: e.target.value })}
             placeholder="输入单条需求描述..."
             disabled={loading}
           />
@@ -137,7 +157,7 @@ function ManualForm() {
           type="primary"
           onClick={handleSubmit}
           loading={loading}
-          disabled={!entries.some((e) => e.text.trim())}
+          disabled={!entries.some((e) => e.title.trim() && e.text.trim())}
         >
           提交全部
         </Button>

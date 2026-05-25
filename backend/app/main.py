@@ -4,16 +4,27 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from app.api.router import api_router
 from app.database import engine
 from app.models.db_models import Base
 
 
+def _requirements_has_title_column(sync_conn) -> bool:
+    inspector = inspect(sync_conn)
+    if "requirements" not in inspector.get_table_names():
+        return True
+    return any(column["name"] == "title" for column in inspector.get_columns("requirements"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        has_title = await conn.run_sync(_requirements_has_title_column)
+        if not has_title:
+            await conn.execute(text("ALTER TABLE requirements ADD COLUMN title VARCHAR(255)"))
     yield
     await engine.dispose()
 

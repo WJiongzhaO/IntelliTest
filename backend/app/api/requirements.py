@@ -29,9 +29,11 @@ router = APIRouter(prefix="/requirements", tags=["Requirements"])
 
 class TextInputRequest(BaseModel):
     text: str = Field(description="Freeform text with one or more requirements")
+    title: Optional[str] = Field(default=None, description="Requirement title")
 
 
 class FormEntry(BaseModel):
+    title: str = Field(min_length=1, description="Requirement title")
     raw_text: str = Field(description="Single requirement description")
 
 
@@ -40,6 +42,7 @@ class FormInputRequest(BaseModel):
 
 
 class RequirementUpdate(BaseModel):
+    title: Optional[str] = None
     raw_text: Optional[str] = None
     input_fields: Optional[list[str]] = None
     data_ranges: Optional[list[str]] = None
@@ -49,6 +52,7 @@ class RequirementUpdate(BaseModel):
 
 class RequirementResponse(BaseModel):
     id: str
+    title: Optional[str] = None
     raw_text: str
     source_type: str
     input_fields: list[str]
@@ -74,6 +78,7 @@ class RequirementResponse(BaseModel):
 def _to_response(model: RequirementModel) -> RequirementResponse:
     return RequirementResponse(
         id=model.id,
+        title=model.title,
         raw_text=model.raw_text,
         source_type=model.source_type,
         input_fields=model.input_fields or [],
@@ -92,6 +97,25 @@ def _to_response(model: RequirementModel) -> RequirementResponse:
     )
 
 
+def _clean_title(value: object) -> str | None:
+    if value is None:
+        return None
+    title = str(value).strip()
+    return title or None
+
+
+def _apply_text_title(items: list[dict], title: str | None) -> list[dict]:
+    cleaned = _clean_title(title)
+    if not cleaned:
+        return items
+    if len(items) <= 1:
+        return [{**item, "title": cleaned} for item in items]
+    return [
+        {**item, "title": cleaned if index == 0 else f"{cleaned} {index + 1}"}
+        for index, item in enumerate(items)
+    ]
+
+
 async def _store_parsed(
     db: AsyncSession,
     items: list[dict],
@@ -100,6 +124,7 @@ async def _store_parsed(
     models: list[RequirementModel] = []
     for item in items:
         model = RequirementModel(
+            title=_clean_title(item.get("title")),
             raw_text=item["raw_text"],
             source_type=source_type,
         )
@@ -142,8 +167,8 @@ async def ingest_text(
     db: AsyncSession = Depends(get_db),
 ):
     """FR 1.0 — Parse freeform text into requirements."""
-    parsed = parse_text(body.text)
-    models = await _store_parsed(db, list(parsed), "text")
+    parsed = _apply_text_title(list(parse_text(body.text)), body.title)
+    models = await _store_parsed(db, parsed, "text")
     return [_to_response(m) for m in models]
 
 
@@ -231,7 +256,7 @@ async def structure_single_requirement(
         raise HTTPException(404, f"Requirement {requirement_id} not found")
 
     try:
-        structured = await structure_requirement(model.id, model.raw_text)
+        structured = await structure_requirement(model.id, model.raw_text, model.title)
     except StructuringError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -274,4 +299,4 @@ async def analyze_risk_for_requirement(requirement_id: str, db: AsyncSession = D
 
     await db.commit()
     await db.refresh(model)
-    return assessment
+    return assessment.model_copy(update={"requirement_title": model.title})

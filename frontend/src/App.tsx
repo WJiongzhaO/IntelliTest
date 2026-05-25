@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Link, Route, Routes, useLocation } from 'react-router-dom';
-import { Badge, Button, Layout, Menu, Space } from 'antd';
+import { Badge, Button, Layout, Space } from 'antd';
 import {
   AppstoreOutlined,
   FileTextOutlined,
-  ExperimentOutlined,
   RadarChartOutlined,
   BranchesOutlined,
   AuditOutlined,
@@ -13,6 +12,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ApartmentOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import DashboardPage from './pages/DashboardPage';
 import RequirementsPage from './pages/RequirementsPage';
@@ -36,40 +36,23 @@ const navTitles: Record<string, string> = {
   '/review-export': '审查导出',
 };
 
-const navItems = [
-  { key: '/', icon: <AppstoreOutlined />, label: <Link to="/">工作台</Link> },
-  {
-    key: '/requirements',
-    icon: <FileTextOutlined />,
-    label: <Link to="/requirements">需求输入</Link>,
-  },
-  { key: '/risk', icon: <RadarChartOutlined />, label: <Link to="/risk">风险分析</Link> },
-  {
-    key: '/blackbox',
-    icon: <ApartmentOutlined />,
-    label: <Link to="/blackbox">黑盒测试</Link>,
-  },
-  {
-    key: '/test-design',
-    icon: <DeploymentUnitOutlined />,
-    label: <Link to="/test-design">综合设计</Link>,
-  },
-  {
-    key: '/whitebox',
-    icon: <BranchesOutlined />,
-    label: <Link to="/whitebox">白盒建模</Link>,
-  },
-  { key: '/oracle', icon: <AuditOutlined />, label: <Link to="/oracle">测试预言</Link> },
-  {
-    key: '/review-export',
-    icon: <DownloadOutlined />,
-    label: <Link to="/review-export">审查导出</Link>,
-  },
+const standaloneNavItems = [
+  { path: '/', icon: <AppstoreOutlined />, label: '工作台' },
+  { path: '/requirements', icon: <FileTextOutlined />, label: '需求输入' },
+  { path: '/risk', icon: <RadarChartOutlined />, label: '风险分析' },
+];
+
+const designSubItems = [
+  { path: '/blackbox', icon: <ApartmentOutlined />, label: '黑盒测试' },
+  { path: '/whitebox', icon: <BranchesOutlined />, label: '白盒建模' },
+  { path: '/oracle', icon: <AuditOutlined />, label: '测试预言' },
 ];
 
 function App() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const [designOpen, setDesignOpen] = useState(true);
+  const isActive = (path: string) => location.pathname === path;
 
   return (
     <Layout className="app-shell">
@@ -87,16 +70,57 @@ function App() {
             <span>ATCrafters</span>
           </div>
         </div>
-        <Button className="new-run-button" icon={<ExperimentOutlined />}>
-          新建测试流程
-        </Button>
         <span className="sider-caption">功能导航</span>
-        <Menu
-          mode="inline"
-          selectedKeys={[location.pathname]}
-          items={navItems}
-          className="sider-menu"
-        />
+        <nav className="sider-nav" aria-label="功能导航">
+          {standaloneNavItems.map((item) => (
+            <Link
+              className={`sider-nav-link${isActive(item.path) ? ' active' : ''}`}
+              to={item.path}
+              key={item.path}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          ))}
+
+          <div className={`sider-nav-group${isActive('/test-design') ? ' active' : ''}`}>
+            <Link className="sider-nav-link sider-nav-parent-link" to="/test-design">
+              <DeploymentUnitOutlined />
+              <span>综合设计</span>
+            </Link>
+            <button
+              className={`sider-nav-toggle${designOpen ? ' open' : ''}`}
+              type="button"
+              aria-label={designOpen ? '收起综合设计子功能' : '展开综合设计子功能'}
+              aria-expanded={designOpen}
+              onClick={() => setDesignOpen((value) => !value)}
+            >
+              <DownOutlined />
+            </button>
+          </div>
+
+          <div className={`sider-subnav${designOpen && !collapsed ? ' open' : ''}`}>
+            {designSubItems.map((item) => (
+              <Link
+                className={`sider-nav-link sider-subnav-link${isActive(item.path) ? ' active' : ''}`}
+                to={item.path}
+                key={item.path}
+                tabIndex={designOpen && !collapsed ? 0 : -1}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </Link>
+            ))}
+          </div>
+
+          <Link
+            className={`sider-nav-link${isActive('/review-export') ? ' active' : ''}`}
+            to="/review-export"
+          >
+            <DownloadOutlined />
+            <span>审查导出</span>
+          </Link>
+        </nav>
       </Sider>
       <Layout className="main-layout">
         <Header className="top-bar">

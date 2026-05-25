@@ -31,7 +31,11 @@ export default function RiskDashboardPage() {
   }, []);
 
   const columns: ColumnsType<RiskAssessment> = [
-    { title: '需求', dataIndex: 'requirement_id' },
+    {
+      title: '需求',
+      dataIndex: 'requirement_title',
+      render: (_: unknown, record) => record.requirement_title || record.requirement_id,
+    },
     { title: '影响', dataIndex: 'impact', width: 80 },
     { title: '概率', dataIndex: 'likelihood', width: 80 },
     { title: '分数', dataIndex: 'risk_score', width: 80 },

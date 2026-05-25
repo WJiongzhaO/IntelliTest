@@ -10,8 +10,8 @@ export async function uploadCsv(file: File): Promise<RequirementResponse[]> {
   return data;
 }
 
-export async function ingestText(text: string): Promise<RequirementResponse[]> {
-  const { data } = await apiClient.post('/requirements/text', { text });
+export async function ingestText(text: string, title?: string): Promise<RequirementResponse[]> {
+  const { data } = await apiClient.post('/requirements/text', { text, title });
   return data;
 }
 

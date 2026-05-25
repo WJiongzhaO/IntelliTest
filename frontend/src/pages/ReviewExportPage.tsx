@@ -28,6 +28,7 @@ import { exportArtifact, downloadBlob } from '../api/export';
 import { listRequirements } from '../api/requirements';
 import { optimizeSuite } from '../api/suites';
 import { SUITE_STORAGE_KEY } from './TestDesignWorkbench';
+import { REVIEW_HISTORY_STORAGE_KEY, REVIEW_SUITE_STORAGE_KEY } from '../utils/exportSuiteStorage';
 import type {
   CoverageItem,
   ExportArtifact,
@@ -39,13 +40,13 @@ import type {
   OptimizationMetrics,
   OptimizationStrategy,
 } from '../types/models';
-import { toStructuredRequirement } from '../utils/requirementMapper';
+import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
-const REVIEW_STORAGE_KEY = 'intellitest_review_suite';
-const HISTORY_STORAGE_KEY = 'intellitest_review_history';
+const REVIEW_STORAGE_KEY = REVIEW_SUITE_STORAGE_KEY;
+const HISTORY_STORAGE_KEY = REVIEW_HISTORY_STORAGE_KEY;
 
 const priorityLabels: Record<string, string> = {
   High: '高',
@@ -136,6 +137,11 @@ export default function ReviewExportPage() {
     if (!suite) return null;
     return { ...suite, test_cases: cases };
   }, [suite, cases]);
+
+  const requirementNameById = useMemo(() => {
+    const entries = requirements.map((item) => [item.id, getRequirementDisplayName(item)] as const);
+    return new Map(entries);
+  }, [requirements]);
 
   const recordChange = (target: string, field: string, before: string, after: string) => {
     if (before === after) return;
@@ -285,6 +291,7 @@ export default function ReviewExportPage() {
       width: 180,
       render: (_, row) => (
         <Space direction="vertical" size={6}>
+          <Text>{requirementNameById.get(row.requirement_id) ?? row.requirement_id}</Text>
           <Tag>{row.technique ?? '人工'}</Tag>
           <Select
             size="small"
@@ -305,6 +312,12 @@ export default function ReviewExportPage() {
 
   const coverageColumns: ColumnsType<CoverageItem> = [
     { title: '覆盖项', dataIndex: 'id', width: 180 },
+    {
+      title: '需求',
+      dataIndex: 'requirement_id',
+      width: 180,
+      render: (id: string) => requirementNameById.get(id) ?? id,
+    },
     {
       title: '描述',
       dataIndex: 'description',

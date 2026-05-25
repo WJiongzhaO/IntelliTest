@@ -1,149 +1,106 @@
-# 需求名称字段缺失问题说明与改进建议
+# 需求标题字段实现说明与适配记录
 
-## 1. 问题概述
+## 1. 背景
 
-当前 IntelliTest 的需求管理模块中，后端没有为需求提供独立的「需求名称」「需求标题」或 `title/name` 字段。前端在多个页面需要展示和选择需求时，只能使用后端生成的需求 `id` 作为主要标识。
+早期 IntelliTest 的需求管理模块只有后端生成的 `id` 和完整需求正文 `raw_text`，没有独立的需求名称字段。前端在需求列表、风险分析、黑盒测试、综合设计、白盒建模和审查导出等页面只能显示短 id，演示和验收时不够直观。
 
-这会导致用户体验不够直观。例如在以下页面中，用户看到的是类似 `1d04bf9bdc2c` 的编号，而不是「登录认证需求」这样的业务名称：
+本次修改已在后端正式增加需求标题字段 `title`，用于保存用户可读的需求名称，并同步适配前端展示、风险信息和导出结果。
 
-- 需求列表
-- 风险分析面板
-- 黑盒测试页面
-- 综合设计页面
-- 白盒建模页面
-- 审查导出页面中的需求追溯信息
+## 2. 当前需求字段
 
-## 2. 当前后端字段情况
+需求响应对象当前包含以下字段：
 
-经检查，后端需求相关模型和接口响应中主要包含以下字段：
+- `id`：后端生成的稳定需求标识。
+- `title`：需求标题或需求名称，面向用户展示，可为空。
+- `raw_text`：完整需求正文。
+- `source_type`：需求来源，例如 `text`、`form`、`csv`。
+- `input_fields`：结构化后的输入字段。
+- `data_ranges`：结构化后的数据范围或约束。
+- `conditions`：结构化后的触发条件。
+- `expected_actions`：结构化后的期望系统动作。
+- `is_structured`：是否已经完成结构化。
+- `risk_impact`：风险影响程度。
+- `risk_likelihood`：风险发生可能性。
+- `risk_score`：风险分数。
+- `priority`：风险优先级。
+- `risk_impact_rationale`：风险影响评分理由。
+- `risk_likelihood_rationale`：风险可能性评分理由。
+- `created_at`：创建时间。
+- `updated_at`：更新时间。
 
-- `id`
-- `raw_text`
-- `source_type`
-- `input_fields`
-- `data_ranges`
-- `conditions`
-- `expected_actions`
-- `is_structured`
-- `risk_impact`
-- `risk_likelihood`
-- `risk_score`
-- `priority`
-- `risk_impact_rationale`
-- `risk_likelihood_rationale`
-- `created_at`
-- `updated_at`
+其中 `title` 是新增字段，`id` 仍然作为系统内部稳定标识，前端展示时优先使用 `title`，没有标题时回退到 `id`。
 
-其中没有专门用于展示的需求名称字段。
+## 3. 后端修改范围
 
-`raw_text` 是完整需求正文，不适合作为稳定名称。它通常较长，可能包含多句业务规则，也可能随用户输入方式变化而变化。因此不建议将 `raw_text` 直接替代需求名称。
+### 3.1 数据库模型
 
-## 3. 曾考虑的前端临时方案
+`backend/app/models/db_models.py` 中的 `RequirementModel` 已新增：
 
-曾尝试在前端使用浏览器 `localStorage` 建立如下映射：
-
-```text
-requirement_id -> requirement_title
+```python
+title: Mapped[str] = mapped_column(String(255), nullable=True)
 ```
 
-该方案可以在单一浏览器中改善显示效果，但存在明显可靠性问题：
+为兼容已有 SQLite 数据，应用启动时会检查 `requirements` 表是否存在 `title` 列；旧库缺少该列时自动执行迁移添加 nullable 字段。
 
-- 换浏览器后名称不可见。
-- 换电脑后名称不可见。
-- 清理浏览器缓存后名称丢失。
-- 多个用户连接同一后端服务时，需求名称无法共享。
-- 后端导出的数据中不包含该名称，交付物追溯仍然只能依赖 `id`。
+### 3.2 Pydantic 模型
 
-因此，该方案已撤回，当前前端继续使用后端 `id` 作为稳定标识。
+`backend/app/models/requirement.py` 中的 `StructuredRequirement` 已新增：
 
-## 4. 影响范围
-
-该问题不会阻断系统功能运行，但会影响可用性和可读性：
-
-1. 用户在下拉框中选择需求时，需要依靠 id 或需求正文判断目标需求。
-2. 风险分析和测试设计页面中，需求来源不够直观。
-3. 导出测试工件后，需求追溯字段对非开发人员不友好。
-4. 多需求场景下，多个短 id 容易混淆，影响演示和验收体验。
-
-## 5. 是否属于成员 E 可独立修复范围
-
-从项目分工看，需求录入、需求管理 API、数据库模型属于成员 A 的 FR 1.0 / FR 1.1 范围。
-
-成员 E 可以在前端优化展示方式，但如果要实现跨设备、跨浏览器、跨用户一致的需求名称，就必须由后端和数据库持久化该字段。因此该问题不应仅通过前端本地状态解决。
-
-## 6. 建议正式修复方案
-
-建议在后端需求模型中增加一个可选字段：
-
-```text
-title: str | None
+```python
+title: Optional[str] = Field(default=None, description="Human-readable requirement title")
 ```
 
-或使用更明确的字段名：
+`backend/app/api/requirements.py` 中的 `RequirementResponse`、`TextInputRequest`、`FormEntry`、`RequirementUpdate` 也已同步支持 `title`。
 
-```text
-requirement_name: str | None
-```
+### 3.3 需求创建接口
 
-推荐使用 `title`，原因是简短、通用，并且与测试用例 `title` 字段语义一致。
+当前创建入口对 `title` 的支持如下：
 
-## 7. 建议修改点
+- `POST /api/v1/requirements/text`：请求体支持 `title`；当文本被拆分为多条需求时，会为后续条目追加序号，避免多条需求重名。
+- `POST /api/v1/requirements`：表单输入中 `title` 为必填项。
+- `POST /api/v1/requirements/upload`：CSV 导入会识别标题列，支持 `title`、`name`、`requirement_title`、`requirement_name`、`需求名`、`需求名称`、`标题`、`名称` 等列名。
 
-如果后续允许修改成员 A 后端模块，建议同步调整以下位置：
+### 3.4 需求更新接口
 
-1. 数据库模型
+`PUT /api/v1/requirements/{requirement_id}` 已支持更新 `title`，同时保留对 `raw_text`、`input_fields`、`data_ranges`、`conditions`、`expected_actions` 的更新能力。
 
-   在 `requirements` 表中新增 `title` 字段。
+### 3.5 结构化与风险分析
 
-2. Pydantic 响应模型
+需求结构化时，后端会把已有 `title` 传入并保留到 `StructuredRequirement`。风险分析响应 `RiskAssessment` 新增 `requirement_title`，用于让风险结果能直接显示可读需求名称。
 
-   在需求响应对象中加入：
+## 4. 导出适配
 
-   ```python
-   title: Optional[str] = None
-   ```
+FR 6.0 导出服务已同步支持需求标题：
 
-3. 需求创建接口
+- CSV 和 Excel 的测试用例导出中新增 `requirement_title` 字段。
+- Excel 的 `Requirements` 工作表中包含 `title` 字段。
+- Excel 的 `Coverage` 工作表中新增 `requirement_title` 字段。
+- JSON 导出中，`requirements` 使用 `StructuredRequirement` 的完整结构，因此包含 `title`。
 
-   支持文本输入、表单输入、CSV 导入时传入或解析 `title`。
+这样导出文件既保留 `requirement_id` 的稳定追溯能力，也提供 `requirement_title` 给人工审查和课程展示使用。
 
-4. 需求更新接口
+## 5. 前端适配
 
-   支持通过 `PUT /requirements/{id}` 修改 `title`。
+前端已增加统一展示逻辑：优先显示需求 `title`，为空时回退到 `id`。已适配位置包括：
 
-5. 前端页面
+- 需求输入页的必填需求名输入。
+- 需求列表的需求名列。
+- 风险分析页面。
+- 黑盒测试需求选择。
+- 综合设计需求选择。
+- 白盒建模需求选择。
+- 审查导出中的需求追溯和覆盖项追溯。
 
-   前端在以下位置优先展示 `title`，无标题时回退到 `id`：
+## 6. 兼容策略
 
-   - 需求列表
-   - 风险分析
-   - 黑盒测试
-   - 综合设计
-   - 白盒建模
-   - 审查导出
-
-6. 导出服务
-
-   JSON / CSV / Excel 导出时可包含需求标题字段，提升交付物可读性。
-
-## 8. 兼容性建议
-
-为避免破坏已有数据，`title` 应设计为可选字段：
-
-```text
-title nullable
-```
-
-旧数据没有标题时，前端展示逻辑可采用：
+`title` 设计为可空字段，避免破坏历史数据和已有接口调用。统一展示规则为：
 
 ```text
 display_name = title if title exists else id
 ```
 
-这样既能保证历史数据可继续使用，也能让新建需求拥有更友好的名称。
+因此旧数据仍可正常使用，新数据则可以保存和展示更友好的需求名称。
 
-## 9. 当前结论
+## 7. 当前结论
 
-当前后端没有合适字段可以可靠替代需求名称。前端本地存储名称虽然能短期改善体验，但不适合多设备、多用户和正式交付场景。
-
-因此，当前版本继续使用需求 `id` 作为稳定标识；后续若要提升用户体验，建议由成员 A 或项目负责人在需求管理后端中正式增加 `title` 字段，并由前端统一展示该字段。
+需求标题字段缺失问题已完成后端持久化、接口响应、输入解析、风险结果、导出结果和前端展示适配。后续如果继续扩展测试套件持久化，也应在测试套件与覆盖项相关表中保留 `requirement_id`，并在导出或展示层通过需求表补充 `requirement_title`。

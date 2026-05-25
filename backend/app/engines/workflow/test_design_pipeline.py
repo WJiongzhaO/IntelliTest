@@ -78,7 +78,7 @@ def run_combined_pipeline(
 
     suite = TestSuite(
         id=f"suite-{uuid.uuid4().hex[:8]}",
-        name=f"Combined design for {requirement.id}",
+        name=f"Combined design for {requirement.title or requirement.id}",
         description=f"Techniques: {', '.join(techniques)}",
         test_cases=cases,
     )

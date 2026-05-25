@@ -4,6 +4,7 @@ import type { RequirementResponse, StructuredRequirement } from '../types/models
 export function toStructuredRequirement(row: RequirementResponse): StructuredRequirement {
   return {
     id: row.id,
+    title: row.title ?? undefined,
     raw_text: row.raw_text,
     input_fields: row.input_fields ?? [],
     data_ranges: row.data_ranges ?? [],
@@ -12,4 +13,10 @@ export function toStructuredRequirement(row: RequirementResponse): StructuredReq
     risk_score: row.risk_score ?? undefined,
     priority: row.priority ?? undefined,
   };
+}
+
+export function getRequirementDisplayName(
+  requirement: { id: string; title?: string | null },
+): string {
+  return requirement.title?.trim() || requirement.id;
 }

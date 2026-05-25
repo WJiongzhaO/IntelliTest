@@ -19,7 +19,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { generateBlackboxWithCoverage } from '../api/blackbox';
 import { listRequirements } from '../api/requirements';
-import { SUITE_STORAGE_KEY } from './TestDesignWorkbench';
 import type {
   BlackBoxGenerationResult,
   BlackBoxTechnique,
@@ -28,7 +27,8 @@ import type {
   TestCase,
   TestSuite,
 } from '../types/models';
-import { toStructuredRequirement } from '../utils/requirementMapper';
+import { saveSuiteForReviewExport } from '../utils/exportSuiteStorage';
+import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
 
 const { Title, Text } = Typography;
 
@@ -80,13 +80,23 @@ export default function BlackboxWorkbench() {
     try {
       const generated = await generateBlackboxWithCoverage(toStructuredRequirement(row), techniques);
       setResult(generated);
-      sessionStorage.setItem(SUITE_STORAGE_KEY, JSON.stringify(buildSuite(row.id, generated)));
       message.success(`已生成 ${generated.test_cases.length} 条黑盒测试用例`);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '黑盒用例生成失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUseForExport = () => {
+    const row = requirements.find((item) => item.id === selectedId);
+    if (!row || !result) {
+      message.warning('请先生成当前黑盒测试结果');
+      return;
+    }
+
+    saveSuiteForReviewExport(buildSuite(row.id, result));
+    message.success('已将当前黑盒结果设为审查导出内容');
   };
 
   const caseColumns: ColumnsType<TestCase> = [
@@ -141,7 +151,7 @@ export default function BlackboxWorkbench() {
               placeholder="选择需求"
               options={requirements.map((item) => ({
                 value: item.id,
-                label: `${item.id}（风险=${item.risk_score ?? '-'}）`,
+                label: `${getRequirementDisplayName(item)}（风险=${item.risk_score ?? '-'}）`,
               }))}
             />
           </Form.Item>
@@ -160,6 +170,14 @@ export default function BlackboxWorkbench() {
           >
             生成黑盒用例
           </Button>
+          <Button disabled={!result} onClick={handleUseForExport} style={{ marginLeft: 8 }}>
+            覆盖审查导出内容
+          </Button>
+          <div style={{ marginTop: 8 }}>
+            <Text type="secondary">
+              单独生成黑盒结果不会自动覆盖综合设计结果；需要替换导出内容时再点击覆盖。
+            </Text>
+          </div>
         </Form>
       </Card>
 

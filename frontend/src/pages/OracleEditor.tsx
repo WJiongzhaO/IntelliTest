@@ -18,7 +18,8 @@ import {
 import { getRequirement } from '../api/requirements';
 import { SUITE_STORAGE_KEY } from './TestDesignWorkbench';
 import type { OracleResult, StructuredRequirement, TestCase, TestSuite } from '../types/models';
-import { toStructuredRequirement } from '../utils/requirementMapper';
+import { saveSuiteForReviewExport } from '../utils/exportSuiteStorage';
+import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
 import { reviewOracle, synthesizeOracles, validateOracle } from '../api/oracle';
 
 const { TextArea } = Input;
@@ -32,6 +33,7 @@ const statusLabels: Record<string, string> = {
 
 const sampleRequirement = (): StructuredRequirement => ({
   id: 'req-oracle-1',
+  title: '登录认证需求',
   raw_text: '用户使用有效账号密码登录后可以看到系统首页。',
   input_fields: ['用户名', '密码'],
   data_ranges: [],
@@ -54,6 +56,7 @@ const sampleCase = (): TestCase => ({
 
 function OracleEditor() {
   const [requirement, setRequirement] = useState<StructuredRequirement>(sampleRequirement);
+  const [suite, setSuite] = useState<TestSuite | null>(null);
   const [suiteCases, setSuiteCases] = useState<TestCase[]>([]);
   const [testCase, setTestCase] = useState<TestCase>(sampleCase);
   const [oracle, setOracle] = useState<OracleResult | null>(null);
@@ -66,6 +69,7 @@ function OracleEditor() {
     if (!raw) return;
     try {
       const suite = JSON.parse(raw) as TestSuite;
+      setSuite(suite);
       setSuiteCases(suite.test_cases);
       if (suite.test_cases[0]) {
         setTestCase(suite.test_cases[0]);
@@ -131,6 +135,27 @@ function OracleEditor() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUseForExport = () => {
+    if (!suite) {
+      message.warning('当前没有可覆盖到审查导出的测试套件');
+      return;
+    }
+
+    const nextCase: TestCase = {
+      ...testCase,
+      expected_result: expectedEdit,
+      modified_by_user: true,
+    };
+    const nextCases = suiteCases.map((item) => (item.id === nextCase.id ? nextCase : item));
+    const nextSuite = { ...suite, test_cases: nextCases };
+
+    setTestCase(nextCase);
+    setSuiteCases(nextCases);
+    setSuite(nextSuite);
+    saveSuiteForReviewExport(nextSuite);
+    message.success('已将当前测试预言结果设为审查导出内容');
   };
 
   return (
@@ -262,9 +287,12 @@ function OracleEditor() {
           <Button danger loading={loading} disabled={!oracle} onClick={() => void handleReview('reject')}>
             拒绝
           </Button>
+          <Button disabled={!suite} onClick={handleUseForExport}>
+            覆盖审查导出内容
+          </Button>
         </Space>
         <div style={{ marginTop: 12 }}>
-          <Text type="secondary">需求原文，编号：{requirement.id}</Text>
+          <Text type="secondary">需求原文：{getRequirementDisplayName(requirement)}</Text>
           <TextArea
             style={{ marginTop: 8 }}
             rows={2}

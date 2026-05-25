@@ -36,6 +36,7 @@ async def _call_and_validate(requirement_text: str) -> dict:
 async def structure_requirement(
     requirement_id: str,
     raw_text: str,
+    title: str | None = None,
 ) -> StructuredRequirement:
     """Parse a single requirement's raw text into structured components.
 
@@ -62,6 +63,7 @@ async def structure_requirement(
 
     structured = StructuredRequirement(
         id=requirement_id,
+        title=title,
         raw_text=raw_text,
         input_fields=data["input_fields"],
         data_ranges=data["data_ranges"],
