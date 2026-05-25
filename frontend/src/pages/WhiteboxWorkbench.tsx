@@ -16,7 +16,7 @@ import {
   message,
 } from 'antd';
 import { listRequirements } from '../api/requirements';
-import { toStructuredRequirement } from '../utils/requirementMapper';
+import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
 import type { RequirementResponse } from '../types/models';
 import mermaid from 'mermaid';
 import type { ColumnsType } from 'antd/es/table';
@@ -38,6 +38,7 @@ const { Title, Text } = Typography;
 
 const defaultRequirement = (): StructuredRequirement => ({
   id: `req-${Date.now()}`,
+  title: '登录会话需求',
   raw_text: '用户使用有效账号密码登录后进入系统；用户退出登录后会话结束。',
   input_fields: ['用户名', '密码'],
   data_ranges: [],
@@ -164,7 +165,7 @@ function WhiteboxWorkbench() {
             <Select
               allowClear
               placeholder="选择已结构化需求"
-              options={dbRows.map((r) => ({ value: r.id, label: r.id }))}
+              options={dbRows.map((r) => ({ value: r.id, label: getRequirementDisplayName(r) }))}
               onChange={(id) => {
                 const row = dbRows.find((r) => r.id === id);
                 if (row) setRequirement(toStructuredRequirement(row));
@@ -178,6 +179,12 @@ function WhiteboxWorkbench() {
             <Input
               value={requirement.id}
               onChange={(e) => setRequirement({ ...requirement, id: e.target.value })}
+            />
+          </Form.Item>
+          <Form.Item label="需求名">
+            <Input
+              value={requirement.title ?? ''}
+              onChange={(e) => setRequirement({ ...requirement, title: e.target.value })}
             />
           </Form.Item>
           <Form.Item label="需求原文">

@@ -9,8 +9,8 @@ interface RequirementState {
 
   fetchAll: () => Promise<void>;
   addByCsv: (file: File) => Promise<RequirementResponse[]>;
-  addByText: (text: string) => Promise<RequirementResponse[]>;
-  addByForm: (entries: { raw_text: string }[]) => Promise<RequirementResponse[]>;
+  addByText: (text: string, title?: string) => Promise<RequirementResponse[]>;
+  addByForm: (entries: { title: string; raw_text: string }[]) => Promise<RequirementResponse[]>;
   structureOne: (id: string) => Promise<RequirementResponse | null>;
   analyzeRisk: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -46,10 +46,10 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     }
   },
 
-  addByText: async (text: string) => {
+  addByText: async (text: string, title?: string) => {
     set({ loading: true, error: null });
     try {
-      const created = await api.ingestText(text);
+      const created = await api.ingestText(text, title);
       set({ requirements: [...created, ...get().requirements], loading: false });
       return created;
     } catch (err: unknown) {

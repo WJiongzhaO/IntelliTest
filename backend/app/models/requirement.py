@@ -9,6 +9,7 @@ class StructuredRequirement(BaseModel):
     """LLM-parsed structured representation of a natural-language requirement."""
 
     id: str = Field(description="Unique requirement identifier")
+    title: Optional[str] = Field(default=None, description="Human-readable requirement title")
     raw_text: str = Field(description="Original requirement text")
     input_fields: list[str] = Field(default_factory=list, description="Identified input fields")
     data_ranges: list[str] = Field(default_factory=list, description="Data ranges / constraints")

@@ -46,6 +46,7 @@ async def risk_dashboard(
         highest_risk.append(
             RiskAssessment(
                 requirement_id=r.id,
+                requirement_title=r.title,
                 impact=r.risk_impact,
                 likelihood=r.risk_likelihood,
                 risk_score=r.risk_score,

@@ -161,9 +161,11 @@ def _build_csv(artifact: ExportArtifact) -> bytes:
     """
 
     stream = io.StringIO(newline="")
+    requirement_titles = _requirement_title_map(artifact)
     fieldnames = [
         "test_case_id",
         "requirement_id",
+        "requirement_title",
         "title",
         "precondition",
         "test_steps",
@@ -180,7 +182,13 @@ def _build_csv(artifact: ExportArtifact) -> bytes:
     writer = csv.DictWriter(stream, fieldnames=fieldnames)
     writer.writeheader()
     for case in _collect_cases(artifact):
-        writer.writerow(_case_to_row(case, include_coverage=artifact.options.include_coverage))
+        writer.writerow(
+            _case_to_row(
+                case,
+                include_coverage=artifact.options.include_coverage,
+                requirement_titles=requirement_titles,
+            )
+        )
     return stream.getvalue().encode("utf-8-sig")
 
 
@@ -199,12 +207,14 @@ def _build_xlsx(artifact: ExportArtifact) -> bytes:
 
     if artifact.options.include_test_cases:
         cases_sheet = wb.create_sheet("Test Cases")
+        requirement_titles = _requirement_title_map(artifact)
         _write_table(
             cases_sheet,
             [
                 _case_to_row(
                     case,
                     include_coverage=artifact.options.include_coverage,
+                    requirement_titles=requirement_titles,
                 )
                 for case in _collect_cases(artifact)
             ],
@@ -216,9 +226,10 @@ def _build_xlsx(artifact: ExportArtifact) -> bytes:
 
     if artifact.options.include_coverage:
         coverage_sheet = wb.create_sheet("Coverage")
+        requirement_titles = _requirement_title_map(artifact)
         _write_table(
             coverage_sheet,
-            [_coverage_to_row(item) for item in artifact.coverage_items],
+            [_coverage_to_row(item, requirement_titles) for item in artifact.coverage_items],
         )
 
     output = io.BytesIO()
@@ -274,10 +285,16 @@ def _style_sheet(sheet) -> None:
     sheet.freeze_panes = "A2"
 
 
-def _case_to_row(case: TestCase, include_coverage: bool = True) -> dict[str, object]:
+def _case_to_row(
+    case: TestCase,
+    include_coverage: bool = True,
+    requirement_titles: dict[str, str] | None = None,
+) -> dict[str, object]:
+    title_map = requirement_titles or {}
     row: dict[str, object] = {
         "test_case_id": case.id,
         "requirement_id": case.requirement_id,
+        "requirement_title": title_map.get(case.requirement_id, ""),
         "title": case.title,
         "precondition": case.precondition or "",
         "test_steps": "\n".join(case.test_steps),
@@ -296,6 +313,7 @@ def _case_to_row(case: TestCase, include_coverage: bool = True) -> dict[str, obj
 def _requirement_to_row(requirement: StructuredRequirement) -> dict[str, object]:
     return {
         "requirement_id": requirement.id,
+        "title": requirement.title or "",
         "raw_text": requirement.raw_text,
         "input_fields": ", ".join(requirement.input_fields),
         "data_ranges": ", ".join(requirement.data_ranges),
@@ -306,10 +324,15 @@ def _requirement_to_row(requirement: StructuredRequirement) -> dict[str, object]
     }
 
 
-def _coverage_to_row(item: CoverageItem) -> dict[str, object]:
+def _coverage_to_row(
+    item: CoverageItem,
+    requirement_titles: dict[str, str] | None = None,
+) -> dict[str, object]:
+    title_map = requirement_titles or {}
     return {
         "coverage_id": item.id,
         "requirement_id": item.requirement_id,
+        "requirement_title": title_map.get(item.requirement_id, ""),
         "description": item.description,
         "item_type": item.item_type,
         "selected_techniques": ", ".join(_plain_value(tech) for tech in item.selected_techniques),
@@ -328,6 +351,14 @@ def _plain_value(value: object) -> str:
     if value is None:
         return ""
     return getattr(value, "value", str(value))
+
+
+def _requirement_title_map(artifact: ExportArtifact) -> dict[str, str]:
+    return {
+        requirement.id: requirement.title
+        for requirement in artifact.requirements
+        if requirement.title
+    }
 
 
 def _build_summary(artifact: ExportArtifact) -> dict[str, object]:

@@ -40,6 +40,7 @@ async def resolve_structured_requirement(
 def _from_db_model(model: RequirementModel) -> StructuredRequirement:
     return StructuredRequirement(
         id=model.id,
+        title=model.title,
         raw_text=model.raw_text,
         input_fields=list(model.input_fields or []),
         data_ranges=list(model.data_ranges or []),

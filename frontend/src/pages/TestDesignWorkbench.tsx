@@ -21,7 +21,8 @@ import type {
   TestCase,
   TestSuite,
 } from '../types/models';
-import { toStructuredRequirement } from '../utils/requirementMapper';
+import { EXPORT_SUITE_STORAGE_KEY, saveSuiteForReviewExport } from '../utils/exportSuiteStorage';
+import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
 
 const { Title, Text } = Typography;
 
@@ -37,7 +38,7 @@ const coverageOptions = [
   { value: 'ALL_TRANSITIONS', label: '全部转换' },
 ];
 
-const SUITE_STORAGE_KEY = 'intellitest_last_suite';
+const SUITE_STORAGE_KEY = EXPORT_SUITE_STORAGE_KEY;
 
 function TestDesignWorkbench() {
   const [rows, setRows] = useState<RequirementResponse[]>([]);
@@ -83,7 +84,7 @@ function TestDesignWorkbench() {
         use_llm: useLlm,
       });
       setSuite(result);
-      sessionStorage.setItem(SUITE_STORAGE_KEY, JSON.stringify(result));
+      saveSuiteForReviewExport(result);
       message.success(`测试套件 ${result.id} 已生成，共 ${result.test_cases.length} 条用例`);
     } catch (err) {
       message.error(err instanceof Error ? err.message : '综合流程执行失败');
@@ -125,7 +126,7 @@ function TestDesignWorkbench() {
               onChange={setSelectedId}
               options={rows.map((r) => ({
                 value: r.id,
-                label: `${r.id}（风险=${r.risk_score ?? '-'}）`,
+                label: `${getRequirementDisplayName(r)}（风险=${r.risk_score ?? '-'}）`,
               }))}
               placeholder="从需求列表中选择"
             />

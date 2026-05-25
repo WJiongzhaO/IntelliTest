@@ -56,6 +56,7 @@ FR 6.0 要求 IntelliTest 能将测试工件以结构化标准格式导出，便
 
 - `test_case_id`
 - `requirement_id`
+- `requirement_title`
 - `title`
 - `precondition`
 - `test_steps`
@@ -66,6 +67,20 @@ FR 6.0 要求 IntelliTest 能将测试工件以结构化标准格式导出，便
 - `risk_score`
 - `coverage_items`
 - `modified_by_user`
+
+需求导出字段包含：
+
+- `requirement_id`
+- `title`
+- `raw_text`
+- `input_fields`
+- `data_ranges`
+- `conditions`
+- `expected_actions`
+- `risk_score`
+- `priority`
+
+覆盖项导出字段中也会包含 `requirement_title`，用于在 Coverage 工作表中直接展示可读需求名称。
 
 这些字段可以体现测试用例、需求、风险与覆盖项之间的可追溯关系。
 
@@ -87,7 +102,7 @@ FR 6.0 要求 IntelliTest 能将测试工件以结构化标准格式导出，便
 
 具体表现如下：
 
-- 需求原文、结构化结果和风险分析结果由后端数据库保存，因此 Docker 或后端服务重启后仍可在需求列表中看到。
+- 需求标题、需求原文、结构化结果和风险分析结果由后端数据库保存，因此 Docker 或后端服务重启后仍可在需求列表中看到。
 - 黑盒测试用例、综合测试套件、白盒状态模型、测试预言结果和审查修改历史当前没有完整写入后端数据库。
 - 审查导出页面主要读取当前浏览器会话中最近一次生成或保存的测试套件。
 - 如果用户生成 A 需求的测试用例后没有导出，又继续生成 B 需求或重新生成 A 需求的测试套件，导出页面会以最新结果为准，旧的待导出结果可能被覆盖。

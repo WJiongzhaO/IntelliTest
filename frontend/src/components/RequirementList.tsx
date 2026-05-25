@@ -9,6 +9,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useRequirementStore } from '../stores/requirementStore';
 import type { RequirementResponse } from '../types';
+import { getRequirementDisplayName } from '../utils/requirementMapper';
 
 const sourceLabels: Record<string, string> = {
   csv: 'CSV',
@@ -42,6 +43,14 @@ function buildColumns({
   loading,
 }: Props): ColumnsType<RequirementResponse> {
   return [
+    {
+      title: '需求名',
+      dataIndex: 'title',
+      key: 'title',
+      width: 180,
+      ellipsis: true,
+      render: (_: unknown, record: RequirementResponse) => getRequirementDisplayName(record),
+    },
     {
       title: '编号',
       dataIndex: 'id',
