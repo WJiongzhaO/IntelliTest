@@ -14,6 +14,9 @@ export interface StructuredRequirement {
 /** Client type for a requirement stored in the backend. */
 export interface RequirementResponse {
   id: string;
+  external_id?: string | null;
+  /** From CSV Module column on import; not produced by risk analysis. */
+  module?: string | null;
   title?: string | null;
   raw_text: string;
   source_type: 'csv' | 'text' | 'form';

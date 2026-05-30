@@ -1,0 +1,12 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-028_EP_001,LR-028,Enter key submits login form,EP - Enter key triggers login,Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Enter key",key_event: Enter,login() function is invoked,EP,Low,4,CI_LR-028_field_key_event,No
+LR-028_DT_001,LR-028,Enter key submits login form,DT - Enter pressed triggers login (Rule 0),Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Enter key",key_event: Enter,login() function is invoked,DT,Low,4,CI_LR-028_rule_0,No
+LR-028_DT_002,LR-028,Enter key submits login form,DT - Enter not pressed does nothing (Rule 1),Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Space key",key_event: Space,login() function is not invoked,DT,Low,4,CI_LR-028_rule_1,No
+tc-st-4586de66,LR-028,Enter key submits login form,State transition path 1 (ALL_TRANSITIONS),System in state: LoginForm,"State: LoginForm
+State: LoginForm",PressEnter,The login process is initiated by triggering the login() function.,StateTransition,Low,4,LoginForm--PressEnter/Triggers login()-->LoginForm,No

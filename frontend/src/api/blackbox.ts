@@ -15,18 +15,23 @@ export async function getBlackboxTechniques(): Promise<Record<string, TechniqueI
 
 export async function generateAllBlackbox(
   requirement: StructuredRequirement,
+  useLlm = true,
 ): Promise<TestCase[]> {
-  const { data } = await apiClient.post<TestCase[]>('/blackbox/generate/all', requirement);
+  const { data } = await apiClient.post<TestCase[]>('/blackbox/generate/all', {
+    requirement,
+    use_llm: useLlm,
+  });
   return data;
 }
 
 export async function generateBlackboxTechnique(
   requirement: StructuredRequirement,
   technique: BlackBoxTechnique,
+  useLlm = true,
 ): Promise<TestCase[]> {
   const { data } = await apiClient.post<TestCase[]>(
     `/blackbox/generate/${technique}`,
-    requirement,
+    { requirement, use_llm: useLlm },
   );
   return data;
 }
@@ -34,12 +39,16 @@ export async function generateBlackboxTechnique(
 export async function generateBlackboxWithCoverage(
   requirement: StructuredRequirement,
   selectedTechniques?: BlackBoxTechnique[],
+  requirementId?: string,
+  useLlm = true,
 ): Promise<BlackBoxGenerationResult> {
   const { data } = await apiClient.post<BlackBoxGenerationResult>(
     '/blackbox/generate/with-coverage',
     {
       requirement,
       selected_techniques: selectedTechniques,
+      requirement_id: requirementId,
+      use_llm: useLlm,
     },
   );
   return data;

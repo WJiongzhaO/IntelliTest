@@ -15,6 +15,7 @@ from app.models.requirement import StructuredRequirement
 from app.models.state_machine import CoverageCriterion
 from app.models.test_case import TestCase, TestSuite
 from app.repositories.memory_store import store
+from app.services.artifact_store import persist_suite
 from app.services.requirement_resolver import resolve_structured_requirement
 
 router = APIRouter()
@@ -59,4 +60,13 @@ async def combined_design(
     store.last_suite_id = suite.id
     for case in suite.test_cases:
         store.test_cases[case.id] = case
+
+    persist_id = body.requirement_id
+    if persist_id:
+        await persist_suite(
+            db,
+            requirement_id=persist_id,
+            suite=suite,
+            source_type="combined",
+        )
     return suite

@@ -1,0 +1,7 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-015_EP_002,LR-015,SQL injection UNION in email,EP: UNION injection payload in email should leak or alter query results,Application is running and email field is accessible,"Enter the injection payload '' UNION SELECT NULL, username, password FROM users--' into the email field
+Submit the form/request","' UNION SELECT NULL, username, password FROM users--","The application exhibits SQL injection symptoms: additional data displayed (e.g., username/password) or error messages indicating query modification.",EP,High,12,CI_LR-015_field_email,No
+LR-015_DT_001,LR-015,SQL injection UNION in email,DT: Supply UNION injection payload triggers leak/alter action,Application is running,"Input a UNION injection payload (e.g., ' UNION SELECT 1,2,3-- ) into the email field
+Submit","' UNION SELECT 1,2,3--",Leak or alter query results occurs: extra data appears in response or data is modified.,DT,High,12,CI_LR-015_condition_0,No
+tc-st-77349c66,LR-015,SQL injection UNION in email,State transition path 1 (ALL_TRANSITIONS),System in state: Normal,"State: Normal
+State: Compromised",inject_union,Query results are leaked or altered due to UNION injection in the email field.,StateTransition,Medium,12,Normal--inject_union[UNION-based injection payload is supplied in the email field]/leak or alter query results-->Compromised,No

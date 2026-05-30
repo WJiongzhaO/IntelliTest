@@ -1,0 +1,13 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-033_EP_001,LR-033,Login challenge user Jim,EP - Successful login as Jim solves challenge,User 'Jim' exists with valid password,"Navigate to login page
+Enter username 'Jim' and correct password
+Click login button
+Verify login is successful
+Check that loginJimChallenge is marked as solved","{ username: 'Jim', password: 'CorrectP@ss1' }",Login succeeded and loginJimChallenge is solved,EP,Low,6,CI_LR-033_field_username,No
+LR-033_DT_001,LR-033,Login challenge user Jim,DT - Login as Jim with correct password solves challenge,User 'Jim' exists with valid password,"Navigate to login page
+Enter username 'Jim' and correct password
+Click login button
+Verify login is successful
+Check that loginJimChallenge is solved","{ username: 'Jim', password: 'CorrectP@ss1' }",Login succeeded and loginJimChallenge is solved,DT,Low,6,"CI_LR-033_condition_0, CI_LR-033_condition_1",No
+tc-st-33d403cf,LR-033,Login challenge user Jim,State transition path 1 (ALL_TRANSITIONS),System in state: NotLoggedIn,"State: NotLoggedIn
+State: ChallengeSolved",login,The loginJimChallenge is solved.,StateTransition,Low,6,NotLoggedIn--login[Login as Jim and Login is successful]/Solve loginJimChallenge-->ChallengeSolved,No

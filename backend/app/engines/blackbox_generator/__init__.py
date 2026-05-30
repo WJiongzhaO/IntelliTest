@@ -14,6 +14,7 @@ from app.engines.blackbox_generator.coverage_manager import CoverageManager
 from app.engines.blackbox_generator.decision_table import DecisionTableGenerator
 from app.engines.blackbox_generator.engine import BlackBoxTestGenerator
 from app.engines.blackbox_generator.equivalence_partitioning import EquivalencePartitioningGenerator
+from app.engines.blackbox_generator.llm_generator import LLMBlackBoxGenerator
 
 __all__ = [
     'BaseBlackBoxGenerator',
@@ -22,4 +23,5 @@ __all__ = [
     'DecisionTableGenerator',
     'CoverageManager',
     'BlackBoxTestGenerator',
+    'LLMBlackBoxGenerator',
 ]

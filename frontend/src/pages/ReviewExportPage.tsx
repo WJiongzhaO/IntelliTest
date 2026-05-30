@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Checkbox,
   Col,
+  Collapse,
   Empty,
   Input,
   List,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -17,35 +19,38 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   AuditOutlined,
-  DownloadOutlined,
+  DeleteOutlined,
   FileExcelOutlined,
   FileTextOutlined,
   HistoryOutlined,
+  PlusOutlined,
   SaveOutlined,
   CompressOutlined,
 } from '@ant-design/icons';
+import { getReviewArtifacts, saveReviewBundle, type RequirementReviewBundle } from '../api/artifacts';
 import { exportArtifact, downloadBlob } from '../api/export';
+import BulkExportModal from '../components/BulkExportModal';
+import { defaultExportBasename } from '../utils/directoryExport';
 import { listRequirements } from '../api/requirements';
 import { optimizeSuite } from '../api/suites';
-import { SUITE_STORAGE_KEY } from './TestDesignWorkbench';
-import { REVIEW_HISTORY_STORAGE_KEY, REVIEW_SUITE_STORAGE_KEY } from '../utils/exportSuiteStorage';
+import { REVIEW_HISTORY_STORAGE_KEY } from '../utils/exportSuiteStorage';
 import type {
   CoverageItem,
-  ExportArtifact,
   ExportFormat,
+  OptimizationMetrics,
+  OptimizationStrategy,
   RequirementResponse,
   ReviewHistoryItem,
   TestCase,
-  TestSuite,
-  OptimizationMetrics,
-  OptimizationStrategy,
 } from '../types/models';
-import { getRequirementDisplayName, toStructuredRequirement } from '../utils/requirementMapper';
+import { getRequirementRefId, toStructuredRequirement } from '../utils/requirementMapper';
+import {
+  createManualTestCase,
+  syncCoverageFromCases,
+} from '../utils/reviewCoverageSync';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
-
-const REVIEW_STORAGE_KEY = REVIEW_SUITE_STORAGE_KEY;
 const HISTORY_STORAGE_KEY = REVIEW_HISTORY_STORAGE_KEY;
 
 const priorityLabels: Record<string, string> = {
@@ -60,65 +65,62 @@ const strategyLabels: Record<OptimizationStrategy, string> = {
   risk_then_minimize: '风险优先 + 覆盖最小化',
 };
 
-function buildCoverageFromCases(cases: TestCase[]): CoverageItem[] {
-  const coverageMap = new Map<string, CoverageItem>();
-  cases.forEach((testCase) => {
-    testCase.coverage_items.forEach((coverageId) => {
-      const existing = coverageMap.get(coverageId);
-      if (existing) {
-        coverageMap.set(coverageId, {
-          ...existing,
-          covered_by_test_cases: [...new Set([...existing.covered_by_test_cases, testCase.id])],
-        });
-        return;
-      }
-      coverageMap.set(coverageId, {
-        id: coverageId,
-        requirement_id: testCase.requirement_id,
-        description: coverageId,
-        item_type: testCase.technique === 'StateTransition' ? 'state_transition' : 'blackbox',
-        selected_techniques:
-          testCase.technique && testCase.technique !== 'StateTransition' ? [testCase.technique] : [],
-        covered_by_test_cases: [testCase.id],
-      });
-    });
-  });
-  return Array.from(coverageMap.values());
+function bundleLabel(bundle: RequirementReviewBundle): string {
+  const title = bundle.title?.trim();
+  if (title) return `${bundle.requirement_ref} · ${title}`;
+  return bundle.requirement_ref;
 }
 
-function parseStoredSuite(): TestSuite | null {
-  const reviewed = sessionStorage.getItem(REVIEW_STORAGE_KEY);
-  const generated = sessionStorage.getItem(SUITE_STORAGE_KEY);
-  const raw = reviewed ?? generated;
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as TestSuite;
-  } catch {
-    return null;
-  }
+function exportBasename(bundle: RequirementReviewBundle): string {
+  return defaultExportBasename(bundle);
+}
+
+function applyOptimizedCases(
+  bundle: RequirementReviewBundle,
+  testCases: TestCase[],
+): RequirementReviewBundle {
+  return {
+    ...bundle,
+    test_cases: testCases,
+    coverage_items: syncCoverageFromCases(bundle.coverage_items, testCases),
+  };
 }
 
 export default function ReviewExportPage() {
-  const [suite, setSuite] = useState<TestSuite | null>(null);
-  const [cases, setCases] = useState<TestCase[]>([]);
+  const [bundles, setBundles] = useState<RequirementReviewBundle[]>([]);
   const [requirements, setRequirements] = useState<RequirementResponse[]>([]);
-  const [coverageItems, setCoverageItems] = useState<CoverageItem[]>([]);
   const [history, setHistory] = useState<ReviewHistoryItem[]>([]);
-  const [fileBasename, setFileBasename] = useState('intellitest_test_artifacts');
+  const [loading, setLoading] = useState(false);
+  const [activeKeys, setActiveKeys] = useState<string[]>([]);
   const [strategy, setStrategy] = useState<OptimizationStrategy>('risk_then_minimize');
   const [metrics, setMetrics] = useState<OptimizationMetrics | null>(null);
   const [includeRequirements, setIncludeRequirements] = useState(true);
   const [includeCoverage, setIncludeCoverage] = useState(true);
-  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exporting, setExporting] = useState<string | null>(null);
+  const [bulkExportOpen, setBulkExportOpen] = useState(false);
+
+  const [casePageByReq, setCasePageByReq] = useState<Record<string, number>>({});
+  const [casePageSizeByReq, setCasePageSizeByReq] = useState<Record<string, number>>({});
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [artifactData, reqRows] = await Promise.all([
+        getReviewArtifacts(),
+        listRequirements(),
+      ]);
+      setBundles(artifactData.bundles);
+      setRequirements(reqRows);
+      setActiveKeys(artifactData.bundles.map((b) => b.requirement_id));
+    } catch {
+      message.error('审查数据加载失败，请确认已生成并持久化测试用例');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const currentSuite = parseStoredSuite();
-    if (currentSuite) {
-      setSuite(currentSuite);
-      setCases(currentSuite.test_cases);
-      setCoverageItems(buildCoverageFromCases(currentSuite.test_cases));
-    }
-
+    void loadData();
     const rawHistory = sessionStorage.getItem(HISTORY_STORAGE_KEY);
     if (rawHistory) {
       try {
@@ -127,21 +129,22 @@ export default function ReviewExportPage() {
         setHistory([]);
       }
     }
+  }, [loadData]);
 
-    void listRequirements()
-      .then(setRequirements)
-      .catch(() => message.warning('需求列表暂时不可用，仍可导出当前测试套件'));
-  }, []);
-
-  const reviewedSuite = useMemo<TestSuite | null>(() => {
-    if (!suite) return null;
-    return { ...suite, test_cases: cases };
-  }, [suite, cases]);
-
-  const requirementNameById = useMemo(() => {
-    const entries = requirements.map((item) => [item.id, getRequirementDisplayName(item)] as const);
-    return new Map(entries);
+  const requirementById = useMemo(() => {
+    const map = new Map<string, RequirementResponse>();
+    for (const item of requirements) {
+      map.set(item.id, item);
+      const ref = getRequirementRefId(item);
+      if (ref !== item.id) map.set(ref, item);
+    }
+    return map;
   }, [requirements]);
+
+  const totalCases = useMemo(
+    () => bundles.reduce((sum, bundle) => sum + bundle.test_cases.length, 0),
+    [bundles],
+  );
 
   const recordChange = (target: string, field: string, before: string, after: string) => {
     if (before === after) return;
@@ -160,22 +163,67 @@ export default function ReviewExportPage() {
     });
   };
 
-  const updateCase = (id: string, patch: Partial<TestCase>) => {
-    setCases((prev) =>
-      prev.map((item) => {
+  const updateBundle = (
+    requirementId: string,
+    updater: (bundle: RequirementReviewBundle) => RequirementReviewBundle,
+  ) => {
+    setBundles((prev) =>
+      prev.map((bundle) => (bundle.requirement_id === requirementId ? updater(bundle) : bundle)),
+    );
+  };
+
+  const updateCase = (requirementId: string, id: string, patch: Partial<TestCase>) => {
+    updateBundle(requirementId, (bundle) => {
+      const test_cases = bundle.test_cases.map((item) => {
         if (item.id !== id) return item;
         const next = { ...item, ...patch, modified_by_user: true };
         Object.entries(patch).forEach(([field, value]) => {
           recordChange(id, field, String(item[field as keyof TestCase] ?? ''), String(value ?? ''));
         });
         return next;
-      }),
-    );
+      });
+      const coverageChanged = patch.coverage_items !== undefined;
+      return {
+        ...bundle,
+        test_cases,
+        coverage_items: coverageChanged
+          ? syncCoverageFromCases(bundle.coverage_items, test_cases)
+          : bundle.coverage_items,
+      };
+    });
   };
 
-  const updateCoverage = (id: string, patch: Partial<CoverageItem>) => {
-    setCoverageItems((prev) =>
-      prev.map((item) => {
+  const addCase = (requirementId: string) => {
+    updateBundle(requirementId, (bundle) => {
+      const newCase = createManualTestCase(bundle.requirement_ref, bundle.test_cases);
+      recordChange(newCase.id, 'created', '-', newCase.title);
+      const test_cases = [...bundle.test_cases, newCase];
+      return {
+        ...bundle,
+        test_cases,
+        coverage_items: syncCoverageFromCases(bundle.coverage_items, test_cases),
+      };
+    });
+    message.success('已新增用例，请编辑后保存');
+  };
+
+  const removeCase = (requirementId: string, caseId: string) => {
+    updateBundle(requirementId, (bundle) => {
+      const test_cases = bundle.test_cases.filter((item) => item.id !== caseId);
+      recordChange(caseId, 'deleted', caseId, '-');
+      return {
+        ...bundle,
+        test_cases,
+        coverage_items: syncCoverageFromCases(bundle.coverage_items, test_cases),
+      };
+    });
+    message.success('用例已删除');
+  };
+
+  const updateCoverage = (requirementId: string, id: string, patch: Partial<CoverageItem>) => {
+    updateBundle(requirementId, (bundle) => ({
+      ...bundle,
+      coverage_items: bundle.coverage_items.map((item) => {
         if (item.id !== id) return item;
         const next = { ...item, ...patch };
         Object.entries(patch).forEach(([field, value]) => {
@@ -183,57 +231,107 @@ export default function ReviewExportPage() {
         });
         return next;
       }),
-    );
+    }));
   };
 
-  const persistReview = () => {
-    if (!reviewedSuite) {
-      message.warning('当前没有可保存的测试套件');
-      return;
-    }
-    sessionStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify(reviewedSuite));
-    message.success('审查结果已保存到当前浏览器会话');
-  };
-
-  const handleOptimize = async () => {
-    if (!cases.length) {
-      message.warning('当前没有可优化的测试用例');
+  const persistAll = async () => {
+    if (bundles.length === 0) {
+      message.warning('没有可保存的审查数据');
       return;
     }
     try {
-      const result = await optimizeSuite(
-        cases,
-        strategy,
-        coverageItems.map((item) => item.id),
+      await Promise.all(
+        bundles.map((bundle) =>
+          saveReviewBundle(bundle.requirement_id, bundle.test_cases, bundle.coverage_items),
+        ),
       );
-      setCases(result.optimized_test_cases);
+      message.success('全部审查结果已保存到数据库');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存失败');
+    }
+  };
+
+  const handleOptimizeBundle = async (bundle: RequirementReviewBundle) => {
+    if (!bundle.test_cases.length) return;
+    try {
+      const result = await optimizeSuite(
+        bundle.test_cases,
+        strategy,
+        bundle.coverage_items.map((item) => item.id),
+      );
+      updateBundle(bundle.requirement_id, (current) =>
+        applyOptimizedCases(current, result.optimized_test_cases),
+      );
       setMetrics(result.metrics);
-      message.success('测试套件优化完成');
+      message.success(`${bundle.requirement_ref} 套件优化完成`);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '套件优化失败');
     }
   };
 
-  const handleExport = async (fileFormat: ExportFormat) => {
-    const artifact: ExportArtifact = {
-      suite: reviewedSuite,
-      requirements: includeRequirements ? requirements.map(toStructuredRequirement) : [],
-      test_cases: cases,
-      coverage_items: includeCoverage ? coverageItems : [],
+  const handleOptimizeAll = async () => {
+    if (bundles.length === 0) {
+      message.warning('没有可优化的需求套件');
+      return;
+    }
+    setExporting('all-optimize');
+    let totalBefore = 0;
+    let totalAfter = 0;
+    try {
+      const nextBundles: RequirementReviewBundle[] = [];
+      for (const bundle of bundles) {
+        if (!bundle.test_cases.length) {
+          nextBundles.push(bundle);
+          continue;
+        }
+        const result = await optimizeSuite(
+          bundle.test_cases,
+          strategy,
+          bundle.coverage_items.map((item) => item.id),
+        );
+        totalBefore += result.metrics.case_count_before;
+        totalAfter += result.metrics.case_count_after;
+        nextBundles.push(applyOptimizedCases(bundle, result.optimized_test_cases));
+        setMetrics(result.metrics);
+      }
+      setBundles(nextBundles);
+      message.success(`全部优化完成：${totalBefore} → ${totalAfter} 条用例`);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '批量优化失败');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const buildArtifactForBundle = (bundle: RequirementReviewBundle, basename?: string) => {
+    const reqRow = requirementById.get(bundle.requirement_id);
+    const structured = reqRow ? [toStructuredRequirement(reqRow)] : [];
+    return {
+      suite: bundle.suite ?? {
+        id: `review-${bundle.requirement_id}`,
+        name: bundle.suite?.name ?? `Combined design for ${bundleLabel(bundle)}`,
+        test_cases: bundle.test_cases,
+      },
+      requirements: includeRequirements ? structured : [],
+      test_cases: bundle.test_cases,
+      coverage_items: includeCoverage ? bundle.coverage_items : [],
       options: {
         include_requirements: includeRequirements,
         include_test_cases: true,
         include_coverage: includeCoverage,
         include_summary: true,
-        file_basename: fileBasename,
+        file_basename: basename ?? exportBasename(bundle),
       },
     };
+  };
 
-    setExporting(fileFormat);
+  const handleExportBundle = async (bundle: RequirementReviewBundle, fileFormat: ExportFormat) => {
+    const key = `${bundle.requirement_id}-${fileFormat}`;
+    setExporting(key);
     try {
-      const blob = await exportArtifact(artifact, fileFormat);
-      downloadBlob(blob, `${fileBasename}.${fileFormat}`);
-      message.success(`${fileFormat.toUpperCase()} 导出完成`);
+      const blob = await exportArtifact(buildArtifactForBundle(bundle), fileFormat);
+      downloadBlob(blob, `${exportBasename(bundle)}.${fileFormat}`);
+      message.success(`${exportBasename(bundle)}.${fileFormat} 导出完成`);
     } catch (error) {
       message.error(error instanceof Error ? error.message : '导出失败');
     } finally {
@@ -241,7 +339,15 @@ export default function ReviewExportPage() {
     }
   };
 
-  const caseColumns: ColumnsType<TestCase> = [
+  const openBulkExport = () => {
+    if (bundles.length === 0) {
+      message.warning('没有可导出的需求套件');
+      return;
+    }
+    setBulkExportOpen(true);
+  };
+
+  const buildCaseColumns = (requirementId: string): ColumnsType<TestCase> => [
     {
       title: '用例',
       dataIndex: 'title',
@@ -249,7 +355,7 @@ export default function ReviewExportPage() {
       render: (_, row) => (
         <Space direction="vertical" size={4} style={{ width: '100%' }}>
           <Text strong>{row.id}</Text>
-          <Input value={row.title} onChange={(event) => updateCase(row.id, { title: event.target.value })} />
+          <Input value={row.title} onChange={(e) => updateCase(requirementId, row.id, { title: e.target.value })} />
         </Space>
       ),
     },
@@ -261,16 +367,16 @@ export default function ReviewExportPage() {
           <TextArea
             rows={3}
             value={row.test_steps.join('\n')}
-            onChange={(event) =>
-              updateCase(row.id, {
-                test_steps: event.target.value.split('\n').filter((line) => line.trim()),
+            onChange={(e) =>
+              updateCase(requirementId, row.id, {
+                test_steps: e.target.value.split('\n').filter((line) => line.trim()),
               })
             }
           />
           <Input
             placeholder="测试数据"
             value={row.test_data}
-            onChange={(event) => updateCase(row.id, { test_data: event.target.value })}
+            onChange={(e) => updateCase(requirementId, row.id, { test_data: e.target.value })}
           />
         </Space>
       ),
@@ -282,7 +388,7 @@ export default function ReviewExportPage() {
         <TextArea
           rows={3}
           value={row.expected_result}
-          onChange={(event) => updateCase(row.id, { expected_result: event.target.value })}
+          onChange={(e) => updateCase(requirementId, row.id, { expected_result: e.target.value })}
         />
       ),
     },
@@ -291,7 +397,6 @@ export default function ReviewExportPage() {
       width: 180,
       render: (_, row) => (
         <Space direction="vertical" size={6}>
-          <Text>{requirementNameById.get(row.requirement_id) ?? row.requirement_id}</Text>
           <Tag>{row.technique ?? '人工'}</Tag>
           <Select
             size="small"
@@ -302,29 +407,37 @@ export default function ReviewExportPage() {
               { value: 'Medium', label: priorityLabels.Medium },
               { value: 'Low', label: priorityLabels.Low },
             ]}
-            onChange={(priority: TestCase['priority']) => updateCase(row.id, { priority })}
+            onChange={(priority: TestCase['priority']) => updateCase(requirementId, row.id, { priority })}
           />
           {row.modified_by_user && <Tag color="blue">已人工修改</Tag>}
         </Space>
       ),
     },
+    {
+      title: '操作',
+      width: 56,
+      fixed: 'right',
+      render: (_, row) => (
+        <Popconfirm
+          title="删除此用例？"
+          description="覆盖项关联将同步更新"
+          onConfirm={() => removeCase(requirementId, row.id)}
+        >
+          <Button size="small" danger type="text" icon={<DeleteOutlined />} aria-label="删除用例" />
+        </Popconfirm>
+      ),
+    },
   ];
 
-  const coverageColumns: ColumnsType<CoverageItem> = [
+  const buildCoverageColumns = (requirementId: string): ColumnsType<CoverageItem> => [
     { title: '覆盖项', dataIndex: 'id', width: 180 },
-    {
-      title: '需求',
-      dataIndex: 'requirement_id',
-      width: 180,
-      render: (id: string) => requirementNameById.get(id) ?? id,
-    },
     {
       title: '描述',
       dataIndex: 'description',
       render: (_, row) => (
         <Input
           value={row.description}
-          onChange={(event) => updateCoverage(row.id, { description: event.target.value })}
+          onChange={(e) => updateCoverage(requirementId, row.id, { description: e.target.value })}
         />
       ),
     },
@@ -335,7 +448,7 @@ export default function ReviewExportPage() {
       render: (_, row) => (
         <Input
           value={row.item_type}
-          onChange={(event) => updateCoverage(row.id, { item_type: event.target.value })}
+          onChange={(e) => updateCoverage(requirementId, row.id, { item_type: e.target.value })}
         />
       ),
     },
@@ -346,78 +459,118 @@ export default function ReviewExportPage() {
     },
   ];
 
+  const collapseItems = bundles.map((bundle) => ({
+    key: bundle.requirement_id,
+    label: (
+      <Space>
+        <Text strong>{bundleLabel(bundle)}</Text>
+        <Tag>{bundle.test_cases.length} 条用例</Tag>
+      </Space>
+    ),
+    children: (
+      <Space direction="vertical" style={{ width: '100%' }} size="middle">
+        <Space wrap>
+          <Button size="small" icon={<PlusOutlined />} onClick={() => addCase(bundle.requirement_id)}>
+            新增用例
+          </Button>
+          <Button size="small" icon={<CompressOutlined />} onClick={() => void handleOptimizeBundle(bundle)}>
+            优化本需求套件
+          </Button>
+          <Button
+            size="small"
+            icon={<FileTextOutlined />}
+            loading={exporting === `${bundle.requirement_id}-json`}
+            onClick={() => void handleExportBundle(bundle, 'json')}
+          >
+            导出 JSON
+          </Button>
+          <Button
+            size="small"
+            icon={<FileTextOutlined />}
+            loading={exporting === `${bundle.requirement_id}-csv`}
+            onClick={() => void handleExportBundle(bundle, 'csv')}
+          >
+            CSV
+          </Button>
+          <Button
+            size="small"
+            icon={<FileExcelOutlined />}
+            loading={exporting === `${bundle.requirement_id}-xlsx`}
+            onClick={() => void handleExportBundle(bundle, 'xlsx')}
+          >
+            Excel
+          </Button>
+        </Space>
+        <Table<TestCase>
+          rowKey="id"
+          dataSource={bundle.test_cases}
+          columns={buildCaseColumns(bundle.requirement_id)}
+          pagination={{
+            current: casePageByReq[bundle.requirement_id] ?? 1,
+            pageSize: casePageSizeByReq[bundle.requirement_id] ?? 5,
+            showSizeChanger: true,
+            pageSizeOptions: [5, 10, 20, 50],
+            onChange: (page, pageSize) => {
+              setCasePageByReq((prev) => ({ ...prev, [bundle.requirement_id]: page }));
+              setCasePageSizeByReq((prev) => ({ ...prev, [bundle.requirement_id]: pageSize }));
+            },
+          }}
+          scroll={{ x: 980 }}
+        />
+        <Table<CoverageItem>
+          rowKey="id"
+          size="small"
+          dataSource={bundle.coverage_items}
+          columns={buildCoverageColumns(bundle.requirement_id)}
+          pagination={{ pageSize: 5 }}
+        />
+      </Space>
+    ),
+  }));
+
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <div className="section-heading">
         <div>
           <Title level={3}>交互式审查与导出</Title>
-          <Text className="muted-text">审查测试用例、覆盖项并导出交付物</Text>
+          <Text className="muted-text">按需求查看、编辑并分别导出测试用例（数据来自数据库）</Text>
         </div>
         <Space wrap>
-          <Button icon={<SaveOutlined />} onClick={persistReview}>
-            保存审查
+          <Button icon={<SaveOutlined />} onClick={() => void persistAll()}>
+            保存全部审查
           </Button>
           <Button
             icon={<CompressOutlined />}
-            onClick={() => void handleOptimize()}
+            loading={exporting === 'all-optimize'}
+            onClick={() => void handleOptimizeAll()}
           >
-            优化套件
+            优化全部套件
           </Button>
-          <Button
-            icon={<FileTextOutlined />}
-            loading={exporting === 'json'}
-            onClick={() => void handleExport('json')}
-          >
-            JSON
+          <Button type="primary" icon={<FileExcelOutlined />} onClick={openBulkExport}>
+            批量导出
           </Button>
-          <Button
-            icon={<FileTextOutlined />}
-            loading={exporting === 'csv'}
-            onClick={() => void handleExport('csv')}
-          >
-            CSV
-          </Button>
-          <Button
-            type="primary"
-            icon={<FileExcelOutlined />}
-            loading={exporting === 'xlsx'}
-            onClick={() => void handleExport('xlsx')}
-          >
-            Excel
+          <Button onClick={() => void loadData()} loading={loading}>
+            刷新
           </Button>
         </Space>
       </div>
 
       <div className="tool-panel">
         <Row gutter={[16, 16]}>
-          <Col xs={24} lg={8}>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Text strong>导出文件名</Text>
-              <Input value={fileBasename} onChange={(event) => setFileBasename(event.target.value)} />
-            </Space>
-          </Col>
           <Col xs={24} lg={10}>
             <Space direction="vertical">
               <Text strong>导出范围</Text>
               <Checkbox checked disabled>
                 测试用例
               </Checkbox>
-              <Checkbox checked={includeRequirements} onChange={(event) => setIncludeRequirements(event.target.checked)}>
+              <Checkbox checked={includeRequirements} onChange={(e) => setIncludeRequirements(e.target.checked)}>
                 需求与风险
               </Checkbox>
-              <Checkbox checked={includeCoverage} onChange={(event) => setIncludeCoverage(event.target.checked)}>
+              <Checkbox checked={includeCoverage} onChange={(e) => setIncludeCoverage(e.target.checked)}>
                 覆盖项
               </Checkbox>
             </Space>
           </Col>
-          <Col xs={24} lg={6}>
-            <div className="metric-tile">
-              <span>{cases.length}</span>
-              <Text>待导出用例</Text>
-            </div>
-          </Col>
-        </Row>
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} lg={8}>
             <Text strong>优化策略</Text>
             <Select<OptimizationStrategy>
@@ -431,53 +584,41 @@ export default function ReviewExportPage() {
               ]}
             />
           </Col>
-          <Col xs={24} lg={16}>
-            {metrics && (
-              <div className="optimizer-summary">
-                <Tag color="blue">{strategyLabels[metrics.strategy_applied]}</Tag>
-                <Text>
-                  用例数 {metrics.case_count_before} → {metrics.case_count_after}
-                </Text>
-                <Text>
-                  覆盖率 {(metrics.coverage_ratio_before * 100).toFixed(0)}% →{' '}
-                  {(metrics.coverage_ratio_after * 100).toFixed(0)}%
-                </Text>
-              </div>
-            )}
+          <Col xs={24} lg={6}>
+            <div className="metric-tile">
+              <span>{totalCases}</span>
+              <Text>待审查用例（{bundles.length} 条需求）</Text>
+            </div>
           </Col>
         </Row>
-      </div>
-
-      <div className="tool-panel">
-        <div className="panel-title">
-          <AuditOutlined />
-          <Text strong>测试用例审查</Text>
-        </div>
-        {cases.length ? (
-          <Table<TestCase>
-            rowKey="id"
-            dataSource={cases}
-            columns={caseColumns}
-            pagination={{ pageSize: 5 }}
-            scroll={{ x: 980 }}
-          />
-        ) : (
-          <Empty description="请先在测试设计工作台生成测试套件" />
+        {metrics && (
+          <div className="optimizer-summary" style={{ marginTop: 16 }}>
+            <Tag color="blue">{strategyLabels[metrics.strategy_applied]}</Tag>
+            <Text>
+              用例数 {metrics.case_count_before} → {metrics.case_count_after}
+            </Text>
+          </div>
         )}
       </div>
 
       <div className="tool-panel">
         <div className="panel-title">
-          <DownloadOutlined />
-          <Text strong>覆盖项审查</Text>
+          <AuditOutlined />
+          <Text strong>按需求审查</Text>
         </div>
-        <Table<CoverageItem>
-          rowKey="id"
-          dataSource={coverageItems}
-          columns={coverageColumns}
-          pagination={{ pageSize: 5 }}
-        />
+        {bundles.length > 0 ? (
+          <Collapse activeKey={activeKeys} onChange={(keys) => setActiveKeys(keys as string[])} items={collapseItems} />
+        ) : (
+          <Empty description="暂无持久化测试用例，请先在综合设计/黑盒/白盒页面生成" />
+        )}
       </div>
+
+      <BulkExportModal
+        open={bulkExportOpen}
+        bundles={bundles}
+        buildArtifact={(bundle, basename) => buildArtifactForBundle(bundle, basename)}
+        onClose={() => setBulkExportOpen(false)}
+      />
 
       <div className="tool-panel">
         <div className="panel-title">

@@ -1,0 +1,9 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-12841f0c,LR-022,Server error during login is handled,State transition path 1 (ALL_TRANSITIONS),System in state: Processing,"State: Processing
+State: ErrorHandling",errorDetected,The error is propagated to the Express error handler.,StateTransition,High,16,Processing--errorDetected[Database or Sequelize error occurs]/Propagate the error to the Express error handler-->ErrorHandling,No
+LR-022_EP_001,LR-022,Server error during login is handled,EP: Database error propagated to Express error handler,The application is configured with an Express error handler,"Simulate a database error during login (e.g., by disconnecting the database or using an invalid query).
+Send a login request.
+Observe the response and server logs.","Login request that triggers a Sequelize database error (e.g., with a malformed SQL query or after shutting down the database)","The error is caught by Sequelize and passed to the Express error handler, which sends an appropriate 500 Internal Server Error response without leaking sensitive details.",EP,High,16,CI_LR-022_condition_0,No
+LR-022_DT_001,LR-022,Server error during login is handled,DT: Database error triggers propagation to error handler,The application is configured with an Express error handler,"Force a database error condition during login (e.g., by causing a Sequelize error).
+Verify that the error is passed to the Express error handler.
+Check the response status and body.","Any login request that results in a database error (e.g., due to a database connection failure)","The Express error handler is invoked; response is a 500 error with a generic message, no stack trace leaked.",DT,High,16,CI_LR-022_decision_rule_0,No

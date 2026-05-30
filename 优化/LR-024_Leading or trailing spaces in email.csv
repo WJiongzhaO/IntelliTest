@@ -1,0 +1,9 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-2cc76493,LR-024,Leading or trailing spaces in email,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: Done",login_form_submitted,The server trims leading and trailing whitespace from the submitted email and uses that trimmed value in the SQL query for authentication.,StateTransition,Medium,9,Idle--login_form_submitted[email not empty]/Trim email; Use trimmed email in SQL query-->Done,No
+LR-024_EP_003,LR-024,Leading or trailing spaces in email,EP - Email with leading whitespace is trimmed,Login form is displayed,"Enter email '   user@example.com' (three leading spaces)
+Submit login form
+Verify that the email used in the SQL query is 'user@example.com' (leading spaces removed)",email: '   user@example.com',Email trimmed to 'user@example.com' before SQL query,EP,High,9,CI_LR-024_field_email,No
+LR-024_DT_001,LR-024,Leading or trailing spaces in email,DT - Login with email containing leading space verifies trimming rule,Login form is displayed,"Enter email ' user@example.com' (one leading space)
+Submit login form
+Verify that the SQL query uses 'user@example.com' (leading space removed)",email: ' user@example.com',Email trimmed to 'user@example.com' and used in SQL query as per trimming rule,DT,Medium,9,CI_LR-024_condition_0,No

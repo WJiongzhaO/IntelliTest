@@ -27,7 +27,10 @@ def test_generate_all():
         "expected_actions": ["Register user"]
     }
     
-    response = requests.post(f"{BASE_URL}/blackbox/generate/all", json=requirement)
+    response = requests.post(
+        f"{BASE_URL}/blackbox/generate/all",
+        json={"requirement": requirement, "use_llm": False},
+    )
     assert response.status_code == 200
     test_cases = response.json()
     print(f"   ✓ Generated {len(test_cases)} test cases")
@@ -54,7 +57,8 @@ def test_generate_with_coverage():
             "conditions": ["If age >= 65", "If membership_type is premium"],
             "expected_actions": ["Create account", "Apply discount"]
         },
-        "selected_techniques": ["EP", "BVA", "DT"]
+        "selected_techniques": ["EP", "BVA", "DT"],
+        "use_llm": False,
     }
     
     response = requests.post(f"{BASE_URL}/blackbox/generate/with-coverage", json=payload)

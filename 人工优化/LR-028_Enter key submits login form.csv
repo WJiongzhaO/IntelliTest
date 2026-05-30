@@ -1,0 +1,13 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user,review_action,review_reason,manual_action,manual_reason,precondition_status,execution_note
+LR-028_EP_001,LR-028,Enter key submits login form,EP - Enter key triggers login,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Enter key",key_event: Enter,login() function is invoked,EP,Low,4,CI_LR-028_field_key_event,Yes,KEPT,工具生成用例有效，仅标记审查通过,,,ui_only,浏览器 UI 测试；API 无法验证按钮禁用/Remember Me/Enter 键
+LR-028_DT_001,LR-028,Enter key submits login form,DT - Enter pressed triggers login (Rule 0),Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Enter key",key_event: Enter,Enter key triggers same login() as Log in button,DT,Low,4,CI_LR-028_rule_0,Yes,PATCHED,补全 test_data / 修正 expected_result 以匹配 Juice Shop 需求,,,ui_only,浏览器 UI 测试；API 无法验证按钮禁用/Remember Me/Enter 键
+LR-028_DT_002,LR-028,Enter key submits login form,DT - Enter not pressed does nothing (Rule 1),Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; Login form is displayed and focused,"Navigate to login form
+Click inside the form to set focus
+Press the Space key",key_event: Space,Enter key triggers same login() as Log in button,DT,Low,4,CI_LR-028_rule_1,Yes,PATCHED,补全 test_data / 修正 expected_result 以匹配 Juice Shop 需求,,,ui_only,浏览器 UI 测试；API 无法验证按钮禁用/Remember Me/Enter 键
+tc-st-4586de66,LR-028,Enter key submits login form,State transition path 1 (ALL_TRANSITIONS),Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; System in state: LoginForm,"State: LoginForm
+State: LoginForm",email=admin@juice-sh.op; password=admin123,The login process is initiated by triggering the login() function.,StateTransition,Low,4,LoginForm--PressEnter/Triggers login()-->LoginForm,Yes,PATCHED,补全 test_data / 修正 expected_result 以匹配 Juice Shop 需求,,,ui_only,浏览器 UI 测试；API 无法验证按钮禁用/Remember Me/Enter 键
+MAN-LR-028-EP-001,LR-028,Enter key submits login form,EP: Enter key submits login when form valid,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; Browser on login form,Fill valid credentials; press Enter; compare with Log in button,email=admin@juice-sh.op; password=admin123; key=Enter,Same HTTP 200 login as button click,EP,Low,,enter_key_submit,Yes,MANUAL_ADD,LR-028 补 UI 可执行 EP,ADDED,LR-028 补 UI 可执行 EP,ui_only,浏览器 UI 测试；API 无法验证按钮禁用/Remember Me/Enter 键

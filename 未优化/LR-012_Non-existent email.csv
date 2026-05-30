@@ -1,0 +1,7 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-012_EP_001,LR-012,Non-existent email,EP - Unknown email login denied,System has no user account with email unknown@example.com,"Navigate to login page
+Enter email 'unknown@example.com'
+Submit login form",email=unknown@example.com,Login is denied with an error message indicating unknown email.,EP,Medium,10,CI_LR-012_field_email,No
+LR-012_DT_001,LR-012,Non-existent email,DT - Email unknown condition true -> login denied,System has no user account with email unknown@example.com,Provide email 'unknown@example.com' in login field and submit,email=unknown@example.com,Login is denied.,DT,Medium,10,CI_LR-012_condition_0,No
+tc-st-4d73c3b9,LR-012,Non-existent email,State transition path 1 (ALL_TRANSITIONS),System in state: LoggedOut,"State: LoggedOut
+State: LoggedOut",login_attempt,Login is denied; user remains in LoggedOut state.,StateTransition,Medium,10,LoggedOut--login_attempt[email is unknown]/deny login-->LoggedOut,No

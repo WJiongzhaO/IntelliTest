@@ -22,6 +22,7 @@ from app.models.state_machine import (
 )
 from app.models.test_case import TestCase
 from app.repositories.memory_store import store
+from app.services.artifact_store import persist_whitebox
 from app.services.requirement_resolver import resolve_structured_requirement
 
 router = APIRouter()
@@ -101,6 +102,20 @@ async def create_whitebox_model(
     )
     store.whitebox_models[model_id] = model
     _register_cases(test_cases)
+
+    persist_id = body.requirement_id
+    if persist_id:
+        await persist_whitebox(
+            db,
+            requirement_id=persist_id,
+            suite_name=f"Whitebox model for {requirement.id}",
+            test_cases=test_cases,
+            payload={
+                "model": model.model_dump(),
+                "sequences": [seq.model_dump() for seq in sequences],
+                "coverage": body.coverage.value,
+            },
+        )
 
     return WhiteboxModelResponse(
         model=model,

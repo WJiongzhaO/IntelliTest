@@ -1,0 +1,7 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-034_EP_001,LR-034,Login challenge user Bender,EP Valid username: Bender solves challenge,Login page accessible,"Enter username 'Bender'
+Submit login form",{username:'Bender'},loginBenderChallenge is solved successfully.,EP,Low,4,CI_LR-034_field_username,No
+LR-034_DT_001,LR-034,Login challenge user Bender,DT Rule: Username is Bender solves challenge,Login page accessible,"Enter username 'Bender'
+Submit login form",{username:'Bender'},loginBenderChallenge solved,DT,Low,4,CI_LR-034_condition_0,No
+tc-st-1beb6158,LR-034,Login challenge user Bender,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: ChallengeSolved",login,loginBenderChallenge is solved.,StateTransition,Low,4,Idle--login[Successful login]/Solve loginBenderChallenge-->ChallengeSolved,No

@@ -20,6 +20,13 @@ _PRIORITY_RANK = {Priority.HIGH: 3, Priority.MEDIUM: 2, Priority.LOW: 1}
 _BLACKBOX_CODES = frozenset({"EP", "BVA", "DT"})
 
 
+def _suite_name(requirement: StructuredRequirement) -> str:
+    title = (requirement.title or "").strip()
+    if title:
+        return f"Combined design for {requirement.id} {title}"
+    return f"Combined design for {requirement.id}"
+
+
 def run_combined_pipeline(
     requirement: StructuredRequirement,
     *,
@@ -38,8 +45,10 @@ def run_combined_pipeline(
 
     requested_blackbox = [t for t in techniques if t in _BLACKBOX_CODES]
     if requested_blackbox:
-        engine = BlackBoxTestGenerator()
-        generated = _generate_blackbox_cases(engine, requirement, requested_blackbox)
+        engine = BlackBoxTestGenerator(use_llm=use_llm)
+        generated = _generate_blackbox_cases(
+            engine, requirement, requested_blackbox, use_llm=use_llm
+        )
         for case in generated:
             _upsert_case(merged, case)
 
@@ -78,7 +87,7 @@ def run_combined_pipeline(
 
     suite = TestSuite(
         id=f"suite-{uuid.uuid4().hex[:8]}",
-        name=f"Combined design for {requirement.title or requirement.id}",
+        name=_suite_name(requirement),
         description=f"Techniques: {', '.join(techniques)}",
         test_cases=cases,
     )
@@ -100,14 +109,20 @@ def _generate_blackbox_cases(
     engine: BlackBoxTestGenerator,
     requirement: StructuredRequirement,
     techniques: list[str],
+    *,
+    use_llm: bool = True,
 ) -> list[TestCase]:
     if set(techniques) >= _BLACKBOX_CODES:
-        return engine.generate_all_techniques(requirement)
+        return engine.generate_all_techniques(requirement, use_llm=use_llm)
 
     cases: list[TestCase] = []
     for code in techniques:
         technique = BlackBoxTechnique(code)
-        cases.extend(engine.generate_specific_technique(requirement, technique))
+        cases.extend(
+            engine.generate_specific_technique(
+                requirement, technique, use_llm=use_llm
+            )
+        )
     return cases
 
 

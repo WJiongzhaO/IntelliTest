@@ -26,6 +26,21 @@ TITLE_COLUMN_KEYWORDS = (
     "名称",
 )
 
+ID_COLUMN_EXACT = frozenset(
+    {
+        "id",
+        "req_id",
+        "requirement_id",
+        "reqid",
+        "ref",
+        "ref_id",
+        "编号",
+        "识别id",
+        "需求编号",
+        "需求id",
+    }
+)
+
 TEXT_COLUMN_KEYWORDS = (
     "require",
     "desc",
@@ -57,6 +72,17 @@ def _column_matches(column: object, keywords: tuple[str, ...]) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+def _is_id_column(column: object) -> bool:
+    return str(column).strip().lower() in ID_COLUMN_EXACT
+
+
+MODULE_COLUMN_EXACT = frozenset({"module", "模块", "功能模块", "所属模块"})
+
+
+def _is_module_column(column: object) -> bool:
+    return str(column).strip().lower() in MODULE_COLUMN_EXACT
+
+
 def parse_csv(file_bytes: bytes, filename: str) -> ParseResult:
     """Parse a CSV file into individual requirement entries.
 
@@ -81,10 +107,19 @@ def parse_csv(file_bytes: bytes, filename: str) -> ParseResult:
     title_col_candidates = [
         c for c in df.columns if _column_matches(c, TITLE_COLUMN_KEYWORDS)
     ]
+    id_col_candidates = [c for c in df.columns if _is_id_column(c)]
+    module_col_candidates = [c for c in df.columns if _is_module_column(c)]
     text_col_candidates = [
         c for c in df.columns if _column_matches(c, TEXT_COLUMN_KEYWORDS)
     ]
-    text_col_candidates = [c for c in text_col_candidates if c not in title_col_candidates]
+    text_col_candidates = [
+        c
+        for c in text_col_candidates
+        if c not in title_col_candidates
+        and c not in id_col_candidates
+        and c not in module_col_candidates
+    ]
+    skip_cols = set(title_col_candidates) | set(id_col_candidates) | set(module_col_candidates)
 
     rows: list[dict] = []
     for i, (_, row) in enumerate(df.iterrows()):
@@ -92,15 +127,27 @@ def parse_csv(file_bytes: bytes, filename: str) -> ParseResult:
         if title_col_candidates:
             title = str(row[title_col_candidates[0]]).strip()
 
+        external_id = None
+        if id_col_candidates:
+            external_id = str(row[id_col_candidates[0]]).strip() or None
+
+        module = None
+        if module_col_candidates:
+            module = str(row[module_col_candidates[0]]).strip() or None
+
         text = ""
         if text_col_candidates:
             text = " ".join(str(row[c]) for c in text_col_candidates if str(row[c]).strip())
         if not text:
-            text = " ".join(str(v) for v in row.values if str(v).strip())
+            text = " ".join(
+                str(v) for c, v in row.items() if c not in skip_cols and str(v).strip()
+            )
         if text.strip():
             rows.append(
                 {
                     "index": i,
+                    "external_id": external_id,
+                    "module": module,
                     "title": title or None,
                     "raw_text": text.strip(),
                     "source_row": row.to_dict(),

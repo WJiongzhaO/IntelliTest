@@ -1,0 +1,9 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-d3982c78,LR-004,Empty email blocks client-side submit,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: Idle",submit,The login form does not submit; submission is prevented.,StateTransition,Low,6,Idle--submit[email is empty]/Prevent form submission-->Idle,No
+LR-004_EP_001,LR-004,Empty email blocks client-side submit,EP - Empty email prevents form submission,Login form is displayed,"1. Enter email as empty string
+2. Attempt to submit the form",email: '',Form submission is prevented; no request sent to server.,EP,Low,6,CI_LR-004_field_email,No
+LR-004_DT_002,LR-004,Empty email blocks client-side submit,DT - Non-empty email allows submission,Login form is displayed,"1. Enter any email
+2. Click submit",email: 'some@email.com',Form submits normally,DT,Low,6,CI_LR-004_rule_1,No
+LR-004_DT_001,LR-004,Empty email blocks client-side submit,DT - Empty email triggers prevention,Login form is displayed,"1. Leave email field empty
+2. Click submit",email: '',Form submission blocked,DT,Low,6,CI_LR-004_rule_0,No

@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.artifacts import router as artifacts_router
 from app.api.blackbox import router as blackbox_router
 from app.api.export import router as export_router
 from app.api.oracle import router as oracle_router
@@ -14,6 +15,7 @@ from app.api.whitebox import router as whitebox_router
 api_router = APIRouter()
 
 api_router.include_router(requirements_router)
+api_router.include_router(artifacts_router)
 api_router.include_router(risk_router)
 api_router.include_router(suites_router)
 api_router.include_router(blackbox_router)

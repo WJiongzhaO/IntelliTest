@@ -86,5 +86,8 @@ logs/
 credentials.*
 secrets.*
 
+# ===================== Cloned target applications =====================
+target-apps/juice-shop/
+
 # ===================== Project docs (not for commit) =====================
 IntelliTest项目规划文档.md

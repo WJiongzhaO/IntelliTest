@@ -11,3 +11,7 @@ class WhiteboxModelError(IntelliTestError):
 
 class OracleSynthesisError(IntelliTestError):
     """Raised when oracle CoT synthesis or validation fails."""
+
+
+class BlackboxGenerationError(IntelliTestError):
+    """Raised when LLM black-box test design or validation fails."""

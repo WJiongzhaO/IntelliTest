@@ -22,6 +22,7 @@ import WhiteboxWorkbench from './pages/WhiteboxWorkbench';
 import OracleEditor from './pages/OracleEditor';
 import ReviewExportPage from './pages/ReviewExportPage';
 import BlackboxWorkbench from './pages/BlackboxWorkbench';
+import JobQueuePanel from './components/JobQueuePanel';
 
 const { Header, Content, Sider } = Layout;
 
@@ -151,6 +152,7 @@ function App() {
           </Routes>
         </Content>
       </Layout>
+      <JobQueuePanel />
     </Layout>
   );
 }

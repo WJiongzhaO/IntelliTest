@@ -1,0 +1,13 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-016_EP_001,LR-016,XSS payload in email (error reflection),EP - Normal email error reflection via Angular interpolation,User is on login page; account for user@example.com does not exist or login will fail,"Navigate to the login page
+Enter email 'user@example.com'
+Enter any password (e.g., 'password')
+Submit the login form
+Observe the error message displayed on the page","email='user@example.com', password='password'","Error message is displayed and contains 'user@example.com' as literal text. No JavaScript dialog appears, and the HTML is rendered as plain text (Angular interpolation safely binds the content).",EP,Low,6,CI_LR-016_field_email,No
+LR-016_DT_001,LR-016,XSS payload in email (error reflection),DT - Email without XSS payload: safe interpolation,User is on login page; login will fail for the given email,"Navigate to the login page
+Enter a normal email that will cause an error (e.g., 'test@example.com')
+Enter a password
+Submit the form
+Verify the error message","email='test@example.com', password='pass'",Error message displays the email as plain text; no script execution. Angular interpolation correctly binds the content.,DT,Low,6,CI_LR-016_condition_0,No
+tc-st-ed53ad8c,LR-016,XSS payload in email (error reflection),State transition path 1 (ALL_TRANSITIONS),System in state: LoginViewActive,"State: LoginViewActive
+State: LoginViewActive",loginError,Login error message is displayed via Angular interpolation in the login template.,StateTransition,Low,6,LoginViewActive--loginError/Bind login error message via Angular interpolation in login template-->LoginViewActive,No

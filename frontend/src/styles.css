@@ -569,3 +569,19 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+.job-queue-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 380px;
+  max-height: 460px;
+  z-index: 1000;
+  box-shadow: 0 12px 32px rgba(17, 26, 45, 0.16);
+}
+
+.job-queue-list {
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 8px 0;
+}

@@ -1,0 +1,17 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-e188641d,LR-029,Google OAuth button when redirect is authorized,State transition path 2 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: Idle",redirect_uri_provided,Google login option is displayed.,StateTransition,Medium,12,Idle--redirect_uri_provided[redirect URI is not authorized]-->Idle,No
+tc-st-857e838e,LR-029,Google OAuth button when redirect is authorized,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: ShowingLogin",redirect_uri_provided,Google login option is displayed.,StateTransition,Medium,12,Idle--redirect_uri_provided[redirect URI is authorized]/Show Google login option-->ShowingLogin,No
+LR-029_EP_002,LR-029,Google OAuth button when redirect is authorized,EP - Invalid redirect URI hides Google login,Application config does NOT include 'https://malicious.com/callback' as an authorized redirect URI.,"1. Ensure the application does not have the unauthorized redirect URI in config.
+2. Initiate the OAuth login flow using redirect_uri='https://malicious.com/callback'.
+3. Observe the login page to verify that Google login option is not present.",redirect_uri=https://malicious.com/callback,Google login option is not displayed.,EP,Medium,12,CI_LR-029_field_redirect_uri_invalid,No
+LR-029_EP_001,LR-029,Google OAuth button when redirect is authorized,EP - Valid redirect URI shows Google login,Application config includes 'https://authorized-app.com/callback' as an authorized redirect URI.,"1. Configure the application with the authorized redirect URI.
+2. Initiate the OAuth login flow using redirect_uri='https://authorized-app.com/callback'.
+3. Observe the login page for the presence of the Google login option.",redirect_uri=https://authorized-app.com/callback,Google login option is displayed.,EP,Medium,12,CI_LR-029_field_redirect_uri_valid,No
+LR-029_DT_002,LR-029,Google OAuth button when redirect is authorized,DT - Unauthorized redirect hides Google login,Set redirect_uri as not authorized in application config.,"1. Configure the redirect URI to be unauthorized.
+2. Initiate the OAuth login flow with the unauthorized redirect_uri.
+3. Verify that Google login option is not visible.",redirect_uri=https://unauthorized.com/callback,Google login button is not displayed.,DT,Medium,12,CI_LR-029_condition_0_false,No
+LR-029_DT_001,LR-029,Google OAuth button when redirect is authorized,DT - Authorized redirect shows Google login,Set redirect_uri as authorized in application config.,"1. Configure the redirect URI to be authorized.
+2. Initiate the OAuth login flow with the authorized redirect_uri.
+3. Check if Google login option is visible.",redirect_uri=https://authorized-app.com/callback,Google login button is displayed.,DT,Medium,12,CI_LR-029_condition_0_true,No

@@ -1,0 +1,15 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user,review_action,review_reason,manual_action,manual_reason,precondition_status,execution_note
+LR-016_EP_001,LR-016,XSS payload in email (error reflection),EP - Normal email error reflection via Angular interpolation,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; User is on login page; account for user@example.com does not exist or login will fail,"Navigate to the login page
+Enter email 'user@example.com'
+Enter any password (e.g., 'password')
+Submit the login form
+Observe the error message displayed on the page",email=<script>alert(1)</script>; password=any,HTTP 401; error text HTML-escaped in UI; no script execution,EP,Low,6,CI_LR-016_field_email,Yes,KEPT,工具生成用例有效，仅标记审查通过,PATCHED,人工修正 test_data / oracle / 步骤与 Juice Shop 登录语义一致,satisfied,种子账号/API 前置已验证
+LR-016_DT_001,LR-016,XSS payload in email (error reflection),DT - Email without XSS payload: safe interpolation,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; User is on login page; login will fail for the given email,"Navigate to the login page
+Enter a normal email that will cause an error (e.g., 'test@example.com')
+Enter a password
+Submit the form
+Verify the error message","email='test@example.com', password='pass'",HTTP 401; error message HTML-escaped; no script execution,DT,Low,6,CI_LR-016_condition_0,Yes,PATCHED,补全 test_data / 修正 expected_result 以匹配 Juice Shop 需求,,,satisfied,种子账号/API 前置已验证
+tc-st-ed53ad8c,LR-016,XSS payload in email (error reflection),State transition path 1 (ALL_TRANSITIONS),Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）; System in state: LoginViewActive,"State: LoginViewActive
+State: LoginViewActive",password=any,Login error message is displayed via Angular interpolation in the login template.,StateTransition,Low,6,LoginViewActive--loginError/Bind login error message via Angular interpolation in login template-->LoginViewActive,Yes,PATCHED,补全 test_data / 修正 expected_result 以匹配 Juice Shop 需求,,,satisfied,种子账号/API 前置已验证
+SUP-LR-016-EP-002,LR-016,XSS payload in email (error reflection),EP: XSS img onerror variant in email,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）,POST login with img onerror payload in email,"email=""><img src=x onerror=alert(1)>; password=any",HTTP 401; payload not executed as HTML,EP,Medium,,xss_email_img,Yes,ADDED,需求要求多种 XSS 变体；工具未生成第二条 EP,,,satisfied,种子账号/API 前置已验证
+SUP-LR-016-DT-001,LR-016,XSS payload in email (error reflection),DT: Server returns 401 and template applies HTML escape,Juice Shop 运行于 http://localhost:3001；已加载默认种子数据（verified 2026-05-30）,Submit XSS email; verify error binding uses interpolation escape,email=<script>alert(1)</script>; Angular interpolation active=Yes,"SafeErrorDisplayed: 401 with escaped error, no XSSRendered",DT,Medium,,xss_escape_dt,Yes,ADDED,未优化缺少 DT 决策表分支（安全转义 vs 未转义）,,,satisfied,种子账号/API 前置已验证

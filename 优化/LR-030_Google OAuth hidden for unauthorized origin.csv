@@ -1,0 +1,10 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-e6d44d76,LR-030,Google OAuth hidden for unauthorized origin,State transition path 1 (ALL_TRANSITIONS),System in state: Visible,"State: Visible
+State: Hidden",check_origin,OAuth controls are hidden.,StateTransition,Medium,12,Visible--check_origin[current origin is not in authorizedRedirects]/hide OAuth controls-->Hidden,No
+LR-030_EP_001,LR-030,Google OAuth hidden for unauthorized origin,Verify OAuth controls hidden for unauthorized origin (EP),User is on a page containing OAuth controls; authorizedRedirects list includes 'https://trusted.com' (and excludes other origins).,"Set current_origin to an unauthorized value (e.g., 'https://evil.com')
+Load the page
+Check the visibility of OAuth controls",current_origin='https://evil.com',OAuth controls are hidden,EP,Medium,12,CI_LR-030_field_current_origin,No
+LR-030_DT_001,LR-030,Google OAuth hidden for unauthorized origin,Verify OAuth controls hidden when origin is not authorized (DT rule 1),User is on a page containing OAuth controls; authorizedRedirects list includes 'https://trusted.com' (and excludes other origins).,"Set current_origin to 'https://evil.com' (origin not in authorizedRedirects)
+Confirm the condition 'current origin is not in authorizedRedirects' evaluates to true
+Load the page
+Verify OAuth controls are hidden",current_origin='https://evil.com',OAuth controls are hidden (action: Hide OAuth controls),DT,Medium,12,CI_LR-030_condition_0,No

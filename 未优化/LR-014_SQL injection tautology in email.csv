@@ -1,0 +1,11 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-014_EP_002,LR-014,SQL injection tautology in email,EP: SQL injection email with incorrect password bypasses authentication,"At least one user account exists in database (e.g., 'user@example.com' with password 'correctPassword1')","Navigate to login page
+Enter email ""' OR 1=1 --""
+Enter password 'anyPassword'
+Click login button","email: ' OR 1=1 --, password: anyPassword","Login succeeds without requiring correct password; user is authenticated as some user (e.g., first in database)",EP,High,25,CI_LR-014_field_email,No
+LR-014_DT_001,LR-014,SQL injection tautology in email,DT: SQL injection bypass rule (email_contains_sqli = true),At least one user account exists in database,"Navigate to login page
+Enter email ""' OR 1=1 --""
+Enter password 'irrelevantPassword'
+Click login button","email: ' OR 1=1 --, password: irrelevantPassword",Password check bypassed; login succeeds with any password,DT,High,25,CI_LR-014_condition_0,No
+tc-st-35016a48,LR-014,SQL injection tautology in email,State transition path 1 (ALL_TRANSITIONS),System in state: NotLoggedIn,"State: NotLoggedIn
+State: LoggedIn",login_submit,"Password check is bypassed via SQL injection, and the system grants access (LoggedIn state) without correct password.",StateTransition,High,25,NotLoggedIn--login_submit[email contains SQL injection payload]/bypass password validation-->LoggedIn,No

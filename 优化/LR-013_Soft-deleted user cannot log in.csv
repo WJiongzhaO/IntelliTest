@@ -1,0 +1,8 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-0743a9a5,LR-013,Soft-deleted user cannot log in,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: Idle",loginQuery,Login query results contain only users where deletedAt is null.,StateTransition,Medium,12,Idle--loginQuery[userHasDeletedAt]/excludeUser-->Idle,No
+LR-013_EP_001,LR-013,Soft-deleted user cannot log in,EP: Login with active user (deletedAt null) succeeds,A user account exists with valid credentials and deletedAt is null,"1. Navigate to login page
+2. Enter valid credentials for the active user
+3. Submit login form","username: 'activeuser', password: 'validpass'",Login successful; user is authenticated.,EP,Medium,12,CI_LR-013_field_deletedAt,No
+LR-013_DT_002,LR-013,Soft-deleted user cannot log in,"DT: Rule 2 – Login performed, user soft‑deleted → exclude",A user account exists with deletedAt set and valid credentials,1. Initiate login query for the user with valid credentials,"username: 'deleteduser', password: 'validpass'",User record is excluded from login query; authentication fails.,DT,Medium,12,CI_LR-013_decision_rule_1,No
+LR-013_DT_001,LR-013,Soft-deleted user cannot log in,"DT: Rule 1 – Login performed, user not soft‑deleted → include",A user account exists with deletedAt null and valid credentials,1. Initiate login query for the user with valid credentials,"username: 'activeuser', password: 'validpass'",User record is included in login query; authentication succeeds.,DT,Medium,12,CI_LR-013_decision_rule_0,No

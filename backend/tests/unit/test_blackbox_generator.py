@@ -101,9 +101,13 @@ class TestDecisionTable:
 class TestBlackBoxEngine:
     """Tests for the main black-box engine."""
 
-    def test_generate_all_techniques(self, sample_requirement):
+    @pytest.fixture
+    def engine(self):
+        """Rule-based engine for deterministic unit tests."""
+        return BlackBoxTestGenerator(use_llm=False)
+
+    def test_generate_all_techniques(self, sample_requirement, engine):
         """Test generation using all techniques."""
-        engine = BlackBoxTestGenerator()
         test_cases = engine.generate_all_techniques(sample_requirement)
 
         assert len(test_cases) > 0
@@ -114,11 +118,9 @@ class TestBlackBoxEngine:
         assert "BVA" in techniques_used
         assert "DT" in techniques_used
 
-    def test_generate_specific_technique(self, sample_requirement):
+    def test_generate_specific_technique(self, sample_requirement, engine):
         """Test generation using specific technique."""
         from app.models.test_case import BlackBoxTechnique
-
-        engine = BlackBoxTestGenerator()
 
         ep_tests = engine.generate_specific_technique(
             sample_requirement, BlackBoxTechnique.EP
@@ -130,9 +132,8 @@ class TestBlackBoxEngine:
         )
         assert all(tc.technique == BlackBoxTechnique.BVA for tc in bva_tests)
 
-    def test_generate_with_coverage_tracking(self, sample_requirement):
+    def test_generate_with_coverage_tracking(self, sample_requirement, engine):
         """Test generation with coverage tracking."""
-        engine = BlackBoxTestGenerator()
         result = engine.generate_with_coverage_tracking(sample_requirement)
 
         assert 'coverage_items' in result
@@ -157,9 +158,12 @@ class TestBlackBoxEngine:
 class TestCoverageManager:
     """Tests for coverage item management."""
 
-    def test_identify_coverage_items(self, sample_requirement):
+    @pytest.fixture
+    def engine(self):
+        return BlackBoxTestGenerator(use_llm=False)
+
+    def test_identify_coverage_items(self, sample_requirement, engine):
         """Test coverage item identification."""
-        engine = BlackBoxTestGenerator()
         coverage_items = engine.coverage_manager.identify_coverage_items(
             sample_requirement
         )
@@ -170,11 +174,9 @@ class TestCoverageManager:
         item_types = set(item.item_type for item in coverage_items)
         assert len(item_types) >= 1
 
-    def test_coverage_percentage_calculation(self):
+    def test_coverage_percentage_calculation(self, engine):
         """Test coverage percentage calculation."""
         from app.models.test_case import CoverageItem
-
-        engine = BlackBoxTestGenerator()
 
         # Create sample coverage items
         items = [
@@ -197,11 +199,9 @@ class TestCoverageManager:
         percentage = engine.coverage_manager.calculate_coverage_percentage(items)
         assert percentage == 50.0
 
-    def test_get_uncovered_items(self):
+    def test_get_uncovered_items(self, engine):
         """Test retrieval of uncovered items."""
         from app.models.test_case import CoverageItem
-
-        engine = BlackBoxTestGenerator()
 
         items = [
             CoverageItem(
@@ -224,11 +224,9 @@ class TestCoverageManager:
         assert len(uncovered) == 1
         assert uncovered[0].id == "CI2"
 
-    def test_generate_coverage_report(self):
+    def test_generate_coverage_report(self, engine):
         """Test coverage report generation."""
         from app.models.test_case import CoverageItem
-
-        engine = BlackBoxTestGenerator()
 
         items = [
             CoverageItem(

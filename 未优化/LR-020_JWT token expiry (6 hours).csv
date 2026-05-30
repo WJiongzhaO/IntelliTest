@@ -1,0 +1,32 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-020_EP_001,LR-020,JWT token expiry (6 hours),EP: Valid signing algorithm RS256,,"Trigger JWT issuance through normal authentication flow.
+Capture the issued JWT from response.
+Decode the JWT header (base64url).
+Verify the 'alg' claim equals 'RS256'.","Standard authentication credentials (e.g., valid username/password).",JWT header contains 'alg': 'RS256'.,EP,High,15,CI_LR-020_ep_JWT_signing_algorithm_valid,No
+LR-020_EP_002,LR-020,JWT token expiry (6 hours),EP: Invalid signing algorithm (attempt with HS256),System is configured to use RS256; test attempts to force HS256 by modifying JWT signing configuration.,"Change system configuration to set JWT signing algorithm to HS256 (if possible).
+Attempt to issue JWT.
+If JWT is issued, decode header and check algorithm; otherwise verify issuance error.",JWT signing algorithm configuration changed to HS256.,Either JWT issuance fails or the issued JWT still uses RS256.,EP,High,15,CI_LR-020_ep_JWT_signing_algorithm_invalid,No
+LR-020_EP_003,LR-020,JWT token expiry (6 hours),EP: Valid expiration 6 hours,,"Trigger JWT issuance.
+Record the exact issuance time (iat claim).
+Extract the 'exp' claim from the JWT.
+Calculate the difference: exp - iat (in seconds).
+Verify the difference is 21600 seconds (6 hours) within acceptable precision (e.g., ±5 seconds).",Standard authentication credentials.,JWT expiration time is exactly 6 hours from issuance (21600 seconds).,EP,High,15,CI_LR-020_ep_JWT_expiresIn_valid,No
+LR-020_EP_004,LR-020,JWT token expiry (6 hours),EP: Invalid expiration (1 hour instead of 6h),System allows configuration of expiresIn.,"Set system configuration for JWT expiresIn to 1 hour.
+Attempt to issue JWT.
+If JWT is issued, verify expiration time is still 6 hours or issuance fails.",expiresIn config set to 1h.,JWT is not issued or still has 6h expiration despite configuration.,EP,High,15,CI_LR-020_ep_JWT_expiresIn_invalid,No
+LR-020_EP_005,LR-020,JWT token expiry (6 hours),EP: Valid cookie max-age differs from JWT expiresIn,,"Trigger JWT issuance.
+Inspect the HTTP response for Set-Cookie header.
+Parse the max-age attribute (in seconds).
+Verify that max-age value is not equal to 21600 (6h).",Standard authentication request.,Cookie max-age is set to a value different from 21600 seconds.,EP,Medium,15,CI_LR-020_ep_cookie_max-age_valid,No
+LR-020_EP_006,LR-020,JWT token expiry (6 hours),EP: Invalid cookie max-age equals JWT expiresIn,System allows configuration of cookie max-age.,"Set cookie max-age to 21600 seconds (6 hours) in system configuration.
+Trigger JWT issuance.
+Check the Set-Cookie header max-age; verify it is not 21600 or that the system overrides it.",cookie max-age set to 21600.,"Cookie max-age is different from 21600 seconds (e.g., overwritten to a different value).",EP,Low,15,CI_LR-020_ep_cookie_max-age_invalid,No
+LR-020_DT_001,LR-020,JWT token expiry (6 hours),DT: JWT issued triggers all three actions,,"Trigger normal JWT issuance.
+Verify JWT header algorithm is RS256.
+Verify JWT expiration is 6h from now.
+Verify cookie max-age differs from 6h.",Valid authentication credentials.,"All three actions occur: RS256, exp 6h, cookie max-age different.",DT,High,15,CI_LR-020_dt_rule_0,No
+LR-020_DT_002,LR-020,JWT token expiry (6 hours),"DT: JWT not issued, no token or cookie",,"Provide invalid credentials to trigger authentication failure.
+Check response headers and body for JWT token.
+Check for Set-Cookie header.",Invalid username and password.,No JWT token is generated and no cookie related to JWT is set.,DT,High,15,CI_LR-020_dt_rule_1,No
+tc-st-b7d627f8,LR-020,JWT token expiry (6 hours),State transition path 1 (ALL_TRANSITIONS),System in state: NoJWT,"State: NoJWT
+State: JWTIssued",issueJWT,"A JWT is issued using RS256 algorithm with an expiration time of 6 hours, and a cookie is set with a max-age value that is not 6 hours.",StateTransition,High,15,"NoJWT--issueJWT[JWT is issued]/Issue JWT with RS256, set expiration to 6h, set cookie max-age to differing value-->JWTIssued",No

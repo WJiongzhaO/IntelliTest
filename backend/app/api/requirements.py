@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -18,6 +19,7 @@ from app.engines.risk_analyzer.analyzer import RiskAnalysisError, analyze_requir
 from app.models.db_models import RequirementModel
 from app.models.risk import RiskAssessment
 from app.utils.logger import setup_logger
+from app.utils.requirement_ref import requirement_ref_id
 
 logger = setup_logger(__name__)
 
@@ -41,8 +43,13 @@ class FormInputRequest(BaseModel):
     entries: list[FormEntry] = Field(description="List of requirement entries")
 
 
+class BatchDeleteRequest(BaseModel):
+    ids: list[str] = Field(min_length=1, description="Internal requirement ids to delete")
+
+
 class RequirementUpdate(BaseModel):
     title: Optional[str] = None
+    module: Optional[str] = None
     raw_text: Optional[str] = None
     input_fields: Optional[list[str]] = None
     data_ranges: Optional[list[str]] = None
@@ -52,6 +59,8 @@ class RequirementUpdate(BaseModel):
 
 class RequirementResponse(BaseModel):
     id: str
+    external_id: Optional[str] = None
+    module: Optional[str] = None
     title: Optional[str] = None
     raw_text: str
     source_type: str
@@ -78,6 +87,8 @@ class RequirementResponse(BaseModel):
 def _to_response(model: RequirementModel) -> RequirementResponse:
     return RequirementResponse(
         id=model.id,
+        external_id=model.external_id,
+        module=model.module,
         title=model.title,
         raw_text=model.raw_text,
         source_type=model.source_type,
@@ -104,6 +115,13 @@ def _clean_title(value: object) -> str | None:
     return title or None
 
 
+def _clean_external_id(value: object) -> str | None:
+    if value is None:
+        return None
+    external_id = str(value).strip()
+    return external_id or None
+
+
 def _apply_text_title(items: list[dict], title: str | None) -> list[dict]:
     cleaned = _clean_title(title)
     if not cleaned:
@@ -124,13 +142,23 @@ async def _store_parsed(
     models: list[RequirementModel] = []
     for item in items:
         model = RequirementModel(
+            external_id=_clean_external_id(item.get("external_id")),
+            module=_clean_title(item.get("module")),
             title=_clean_title(item.get("title")),
             raw_text=item["raw_text"],
             source_type=source_type,
         )
         db.add(model)
         models.append(model)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            409,
+            "Duplicate requirement ID in import (external_id already exists). "
+            "Remove duplicates or delete existing requirements first.",
+        ) from exc
     for m in models:
         await db.refresh(m)
     logger.info("Stored %d requirements from %s", len(models), source_type)
@@ -229,6 +257,19 @@ async def update_requirement(
 
 
 # ─── Delete ────────────────────────────────────────────────────────────
+
+
+@router.post("/batch-delete")
+async def batch_delete_requirements(body: BatchDeleteRequest, db: AsyncSession = Depends(get_db)):
+    """Delete multiple requirements and cascade-delete their test artifacts."""
+    deleted = 0
+    for requirement_id in body.ids:
+        model = await db.get(RequirementModel, requirement_id)
+        if model:
+            await db.delete(model)
+            deleted += 1
+    await db.commit()
+    return {"detail": f"Deleted {deleted} requirements"}
 
 
 @router.delete("/{requirement_id}")

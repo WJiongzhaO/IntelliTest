@@ -1,0 +1,8 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-009_EP_001,LR-009,Malformed email without @ is still submitted,EP: Malformed email without @ accepted and submitted to API,Login form is loaded and lacks client-side email format validation,"Enter a malformed email (e.g., 'no-at-sign') in the email field
+Enter any password
+Click the submit button","email: 'no-at-sign', password: 'validPass123'","The form submits without error, and the malformed email 'no-at-sign' is sent to the API",EP,Medium,12,CI_LR-009_field_email,No
+LR-009_DT_001,LR-009,Malformed email without @ is still submitted,DT: User submits malformed email reaches API with no validation,Login form has no email format validator,"Submit the login form with email field containing a string without '@' (e.g., 'missing-at')
+Observe that the request is sent to the API","email: 'missing-at', password: 'any'",The email 'missing-at' is included in the API request,DT,Medium,12,CI_LR-009_condition_1,No
+tc-st-8a95bccb,LR-009,Malformed email without @ is still submitted,State transition path 1 (ALL_TRANSITIONS),System in state: EmailEntry,"State: EmailEntry
+State: SubmittedToAPI",submitEmail,The submitted email is sent to the authentication API without format validation.,StateTransition,Medium,12,EmailEntry--submitEmail/sendEmailToAPI-->SubmittedToAPI,No

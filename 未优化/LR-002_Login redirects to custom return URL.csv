@@ -1,0 +1,9 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-002_EP_001,LR-002,Login redirects to custom return URL,EP Valid: Successful login with non-empty redirectUrl navigates to custom URL,User has valid credentials and a redirectUrl query parameter in the login route,"Navigate to login page with redirectUrl=/dashboard in query string
+Enter valid username and password
+Submit login form",redirectUrl=/dashboard,"After successful login, browser navigates to /dashboard",EP,High,16,CI_LR-002_field_redirectUrl,No
+LR-002_DT_001,LR-002,Login redirects to custom return URL,DT Rule 1: Successful login triggers redirect to valid redirectUrl,Valid credentials and redirectUrl available,"Navigate to login page with redirectUrl=/dashboard
+Enter valid credentials
+Submit","redirectUrl=/dashboard, credentials: user@example.com / ValidPass1",User is authenticated and browser navigates to /dashboard,DT,High,16,CI_LR-002_condition_0,No
+tc-st-8d45ba38,LR-002,Login redirects to custom return URL,State transition path 1 (ALL_TRANSITIONS),System in state: LoginPage,"State: LoginPage
+State: Redirected",login,The SPA navigates to the redirectUrl specified in the login route query string after successful login.,StateTransition,High,16,LoginPage--login[Successful login]/Navigate to redirectUrl from login route query string-->Redirected,No

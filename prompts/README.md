@@ -16,9 +16,10 @@ Each template file contains the three required parts:
 |---|---|---|---|
 | `requirement_structure.json` | Parse natural-language requirements into structured JSON | `requirement_structurer` | Done (成员 A) |
 | `risk_analysis.txt` | Assess risk impact & likelihood per requirement | `risk_analyzer` | Pending (成员 B) |
-| `equivalence_partition.txt` | Identify input domains and generate EP test cases | `blackbox_generator` | Pending (成员 C) |
-| `boundary_value.txt` | Generate BVA test cases from identified ranges | `blackbox_generator` | Pending (成员 C) |
-| `decision_table.txt` | Generate decision-table test cases from conditions | `blackbox_generator` | Pending (成员 C) |
+| `blackbox_test_design.txt` | Unified ISO 29119-4 EP + BVA + DT test design via LLM | `blackbox_generator` | Done |
+| `equivalence_partition.txt` | (Legacy) superseded by `blackbox_test_design.txt` | `blackbox_generator` | Deprecated |
+| `boundary_value.txt` | (Legacy) superseded by `blackbox_test_design.txt` | `blackbox_generator` | Deprecated |
+| `decision_table.txt` | (Legacy) superseded by `blackbox_test_design.txt` | `blackbox_generator` | Deprecated |
 | `state_transition.txt` | Extract state-transition tuples from requirements | `whitebox_modeler` | Pending (成员 D) |
 | `oracle_synthesis.txt` | Synthesize expected results from inputs and conditions | `oracle_synthesizer` | Pending (成员 D) |
 

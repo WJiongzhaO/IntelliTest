@@ -42,6 +42,10 @@ export async function deleteRequirement(id: string): Promise<void> {
   await apiClient.delete(`/requirements/${id}`);
 }
 
+export async function batchDeleteRequirements(ids: string[]): Promise<void> {
+  await apiClient.post('/requirements/batch-delete', { ids });
+}
+
 export async function structureRequirement(id: string): Promise<RequirementResponse> {
   const { data } = await apiClient.post(`/requirements/${id}/structure`);
   return data;

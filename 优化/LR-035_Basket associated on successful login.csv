@@ -1,0 +1,13 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-7a5188bd,LR-035,Basket associated on successful login,State transition path 1 (ALL_TRANSITIONS),System in state: NoBasket,"State: NoBasket
+State: BasketExists",getBasket,A new basket is created and returned for the authenticated user.,StateTransition,Medium,12,NoBasket--getBasket[user authenticated]/findOrCreateBasket-->BasketExists,No
+LR-035_EP_002,LR-035,Basket associated on successful login,EP - Unauthenticated user does not trigger basket association,,"Attempt to access the basket association endpoint without a valid session token
+Observe the response and side effects",No valid session token provided,No basket is associated; the request is either rejected or silently ignored,EP,Medium,12,CI_LR-035_field_user_authentication_status_invalid,No
+LR-035_EP_001,LR-035,Basket associated on successful login,EP - Authenticated user gets basket associated,,"Log in with valid credentials to establish an authenticated session
+Trigger the basket association logic (e.g., access a basket-related endpoint)
+Verify that a basket is associated with the user (either retrieved existing or newly created)","username: testuser, password: validPass123",A basket exists and is linked to the authenticated user,EP,Medium,12,CI_LR-035_field_user_authentication_status_valid,No
+LR-035_DT_002,LR-035,Basket associated on successful login,DT - Unauthenticated user no basket operation,,"Without establishing authentication, invoke the basket association logic
+Confirm that no basket is found or created",Unauthenticated user session,No basket operation occurs; no association is made,DT,Medium,12,CI_LR-035_condition_0_false,No
+LR-035_DT_001,LR-035,Basket associated on successful login,DT - Authenticated user finds or creates basket,,"Authenticate as a valid user
+Invoke the basket association mechanism
+Check that a basket is present and linked to the user",Authenticated user session,"The user has an existing basket or a new one is created, successfully associated",DT,Medium,12,CI_LR-035_condition_0_true,No

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RequirementResponse } from '../types';
+import type { RequirementResponse, RiskAssessment } from '../types';
 import * as api from '../api/requirements';
 
 interface RequirementState {
@@ -11,9 +11,10 @@ interface RequirementState {
   addByCsv: (file: File) => Promise<RequirementResponse[]>;
   addByText: (text: string, title?: string) => Promise<RequirementResponse[]>;
   addByForm: (entries: { title: string; raw_text: string }[]) => Promise<RequirementResponse[]>;
-  structureOne: (id: string) => Promise<RequirementResponse | null>;
-  analyzeRisk: (id: string) => Promise<void>;
+  patchRequirement: (id: string, updated: RequirementResponse) => void;
+  applyRiskAssessment: (id: string, assessment: RiskAssessment) => void;
   remove: (id: string) => Promise<void>;
+  batchRemove: (ids: string[]) => Promise<void>;
   clearError: () => void;
 }
 
@@ -72,25 +73,15 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
     }
   },
 
-  structureOne: async (id: string) => {
-    set({ loading: true, error: null });
-    try {
-      const updated = await api.structureRequirement(id);
-      const reqs = get().requirements.map((r) => (r.id === id ? updated : r));
-      set({ requirements: reqs, loading: false });
-      return updated;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '需求结构化失败';
-      set({ error: msg, loading: false });
-      return null;
-    }
+  patchRequirement: (id, updated) => {
+    set({
+      requirements: get().requirements.map((r) => (r.id === id ? updated : r)),
+    });
   },
 
-  analyzeRisk: async (id: string) => {
-    set({ loading: true, error: null });
-    try {
-      const assessment = await api.analyzeRequirementRisk(id);
-      const reqs = get().requirements.map((r) =>
+  applyRiskAssessment: (id, assessment) => {
+    set({
+      requirements: get().requirements.map((r) =>
         r.id === id
           ? {
               ...r,
@@ -102,12 +93,8 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
               risk_likelihood_rationale: assessment.likelihood_rationale,
             }
           : r,
-      );
-      set({ requirements: reqs, loading: false });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '风险分析失败';
-      set({ error: msg, loading: false });
-    }
+      ),
+    });
   },
 
   remove: async (id: string) => {
@@ -116,6 +103,18 @@ export const useRequirementStore = create<RequirementState>((set, get) => ({
       set({ requirements: get().requirements.filter((r) => r.id !== id) });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '删除失败';
+      set({ error: msg });
+    }
+  },
+
+  batchRemove: async (ids: string[]) => {
+    if (ids.length === 0) return;
+    try {
+      await api.batchDeleteRequirements(ids);
+      const idSet = new Set(ids);
+      set({ requirements: get().requirements.filter((r) => !idSet.has(r.id)) });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '批量删除失败';
       set({ error: msg });
     }
   },

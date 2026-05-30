@@ -1,0 +1,14 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-003_EP_001,LR-003,TOTP-enabled account requires second factor,"Valid password, non-empty totpSecret triggers 2FA",User account has a non-empty totpSecret,"Enter password 'correct_password'
+Submit login form",password='correct_password',"After validating the password, the system prompts for a TOTP code.",EP,High,15,CI_LR-003_field_password,No
+LR-003_DT_001,LR-003,TOTP-enabled account requires second factor,DT: both conditions true -> require 2FA,User with non-empty totpSecret,"Enter valid password
+Submit",password='valid_password',"System requires 2FA completion (e.g., TOTP prompt) after password validation.",DT,High,15,CI_LR-003_rule_1,No
+LR-003_DT_002,LR-003,TOTP-enabled account requires second factor,"DT: totpSecret non-empty, password invalid -> no 2FA",User with non-empty totpSecret,"Enter invalid password
+Submit",password='invalid_password',Login fails with error; no 2FA prompt.,DT,High,15,CI_LR-003_rule_2,No
+LR-003_DT_003,LR-003,TOTP-enabled account requires second factor,"DT: totpSecret empty, password valid -> no 2FA",User with empty totpSecret,"Enter valid password
+Submit",password='valid_password',Login succeeds without 2FA prompt.,DT,Medium,15,CI_LR-003_rule_3,No
+tc-st-df8324e0,LR-003,TOTP-enabled account requires second factor,State transition path 1 (ALL_TRANSITIONS),System in state: AwaitingPassword,"State: AwaitingPassword
+State: Awaiting2FA
+State: Authenticated","submit_password, submit_2fa","System transitions from AwaitingPassword to Awaiting2FA after password submission, and to Authenticated after valid 2FA submission, enforcing 2FA completion.",StateTransition,High,15,"AwaitingPassword--submit_password[password valid AND totpSecret not empty]/require 2FA-->Awaiting2FA, Awaiting2FA--submit_2fa/authenticate-->Authenticated",No
+tc-st-7faf679b,LR-003,TOTP-enabled account requires second factor,State transition path 2 (ALL_TRANSITIONS),System in state: AwaitingPassword,"State: AwaitingPassword
+State: Authenticated",submit_password,User is authenticated after password submission without being prompted for two-factor authentication.,StateTransition,High,15,AwaitingPassword--submit_password[password valid AND totpSecret empty]/authenticate-->Authenticated,No

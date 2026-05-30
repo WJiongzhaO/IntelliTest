@@ -1,0 +1,9 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+LR-021_EP_001,LR-021,Remember me stores email in localStorage,EP: Checkbox checked persists email,,"Enter a valid email address
+Check the 'Remember me' checkbox
+Submit the login form","email: test@example.com, remember_me_checkbox: true","The email address 'test@example.com' should be stored in localStorage and persisted for next visit, regardless of login success or failure.",EP,Medium,9,"CI_LR-021_field_email, CI_LR-021_field_remember_me_checkbox",No
+LR-021_DT_001,LR-021,Remember me stores email in localStorage,DT: Checkbox checked rule — persist email,,"Enter a valid email address
+Check the 'Remember me' checkbox
+Submit the login form (login outcome may vary)","email: test@example.com, remember_me_checkbox: true","Email is persisted in localStorage for next visit, regardless of login outcome.",DT,Medium,9,CI_LR-021_condition_0,No
+tc-st-fd573b90,LR-021,Remember me stores email in localStorage,State transition path 1 (ALL_TRANSITIONS),System in state: EmailNotPersisted,"State: EmailNotPersisted
+State: EmailPersisted",login_attempt,"The email address is persisted for the next visit, regardless of whether the login attempt succeeded or failed.",StateTransition,Medium,9,EmailNotPersisted--login_attempt[remember_me_checked]/persist email-->EmailPersisted,No

@@ -1,0 +1,5 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-c1e97732,LR-010,SQL metacharacters in email field,State transition path 1 (ALL_TRANSITIONS),System in state: Idle,"State: Idle
+State: EmailInterpolated",loginRequest,The email from the login request is interpolated directly into the raw SQL query without parameterization.,StateTransition,High,25,Idle--loginRequest[email is used in routes/login.ts]/email is interpolated into raw SQL-->EmailInterpolated,No
+LR-010_EP_002,LR-010,SQL metacharacters in email field,EP - Email with SQL injection payload,,Send POST request to /login with SQL injection payload in email field,email=' OR '1'='1,Server returns SQL error or unexpected behavior indicating injection,EP,High,25,CI_LR-010_field_email,No
+LR-010_DT_001,LR-010,SQL metacharacters in email field,DT - Verify email is interpolated without parameterization,,Send POST request to /login with email containing a single quote,email=',"Server returns SQL syntax error, confirming interpolation",DT,High,25,CI_LR-010_condition_0,No

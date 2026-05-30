@@ -1,0 +1,12 @@
+﻿test_case_id,requirement_id,requirement_title,title,precondition,test_steps,test_data,expected_result,technique,priority,risk_score,coverage_items,modified_by_user
+tc-st-9df29845,LR-032,2FA verify with invalid TOTP,State transition path 1 (ALL_TRANSITIONS),System in state: AwaitingTOTP,"State: AwaitingTOTP
+State: AwaitingTOTP",submit TOTP,Authentication is not completed; user remains unauthenticated.,StateTransition,High,15,AwaitingTOTP--submit TOTP[incorrect TOTP]/reject-->AwaitingTOTP,No
+LR-032_EP_002,LR-032,2FA verify with invalid TOTP,EP: 2FA verify with invalid TOTP blocks authentication,"User has logged in with valid credentials, 2FA is enabled, and is on the TOTP verification page","Navigate to TOTP verification page
+Enter an invalid TOTP code (e.g., '000000')
+Submit the code",Invalid TOTP: 000000,"Authentication fails, error message is displayed (e.g., 'Invalid code'), user remains on verification page",EP,High,15,CI_LR-032_field_TOTP code_invalid,No
+LR-032_EP_001,LR-032,2FA verify with invalid TOTP,EP: 2FA verify with valid TOTP completes authentication,"User has logged in with valid credentials, 2FA is enabled, and is on the TOTP verification page","Navigate to TOTP verification page
+Enter a valid TOTP code generated from the shared secret
+Submit the code",Valid TOTP: <current valid TOTP>,"Authentication succeeds, user is logged in and redirected to the dashboard",EP,Medium,15,CI_LR-032_field_TOTP code_valid,No
+LR-032_DT_001,LR-032,2FA verify with invalid TOTP,DT: TOTP incorrect (Rule 1) blocks authentication,"User has logged in with valid credentials, 2FA is enabled, and is on the TOTP verification page","Navigate to TOTP verification page
+Enter an incorrect TOTP code
+Submit the code",TOTP code that does not match: 000000,System does not authenticate; appropriate error message shown,DT,High,15,CI_LR-032_condition_0,No

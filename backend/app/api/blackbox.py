@@ -2,12 +2,15 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import get_db
 from app.engines.blackbox_generator import BlackBoxTestGenerator
 from app.models.requirement import StructuredRequirement
-from app.models.test_case import BlackBoxTechnique, CoverageItem, TestCase
+from app.models.test_case import BlackBoxTechnique, CoverageItem, TestCase, TestSuite
+from app.services.artifact_store import persist_suite
 
 router = APIRouter(
     prefix="/blackbox",
@@ -23,6 +26,14 @@ class GenerateWithCoverageRequest(BaseModel):
     """Request model for generate_with_coverage endpoint."""
     requirement: StructuredRequirement
     selected_techniques: Optional[list[str]] = None
+    requirement_id: Optional[str] = None
+    use_llm: bool = True
+
+
+class GenerateAllRequest(BaseModel):
+    """Request for all-technique generation with optional LLM toggle."""
+    requirement: StructuredRequirement
+    use_llm: bool = True
 
 
 @router.get("/techniques")
@@ -36,20 +47,12 @@ async def get_available_techniques():
 
 
 @router.post("/generate/all", response_model=list[TestCase])
-async def generate_all_techniques(requirement: StructuredRequirement):
-    """Generate test cases using all three black-box techniques (EP, BVA, DT).
-    
-    This endpoint applies all ISO 29119-4 techniques to the given requirement
-    and returns a comprehensive set of test cases.
-    
-    Args:
-        requirement: The structured requirement to test
-        
-    Returns:
-        List of generated test cases from all techniques
-    """
+async def generate_all_techniques(body: GenerateAllRequest):
+    """Generate test cases using all three black-box techniques (EP, BVA, DT)."""
     try:
-        test_cases = generator_engine.generate_all_techniques(requirement)
+        test_cases = generator_engine.generate_all_techniques(
+            body.requirement, use_llm=body.use_llm
+        )
         return test_cases
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test generation failed: {str(e)}")
@@ -57,71 +60,61 @@ async def generate_all_techniques(requirement: StructuredRequirement):
 
 @router.post("/generate/with-coverage")
 async def generate_with_coverage(
-    requirement: StructuredRequirement,
-    selected_techniques: Optional[list[str]] = None
+    body: GenerateWithCoverageRequest,
+    db: AsyncSession = Depends(get_db),
 ):
-    """Generate test cases with full coverage tracking and reporting.
-    
-    This is the most comprehensive endpoint that provides:
-    - Identified coverage items
-    - Generated test cases
-    - Coverage statistics and metrics
-    
-    Args:
-        requirement: The structured requirement to test
-        selected_techniques: Optional list of techniques to use (default: all)
-        
-    Returns:
-        Dictionary containing coverage_items, test_cases, and coverage_report
-    """
+    """Generate test cases with full coverage tracking and reporting."""
     try:
-        # Convert string techniques to enums if provided
         technique_enums = None
-        if selected_techniques:
-            technique_enums = [
-                BlackBoxTechnique(t.upper()) for t in selected_techniques
-            ]
-        
+        if body.selected_techniques:
+            technique_enums = [BlackBoxTechnique(t.upper()) for t in body.selected_techniques]
+
         result = generator_engine.generate_with_coverage_tracking(
-            requirement, technique_enums
+            body.requirement, technique_enums, use_llm=body.use_llm
         )
-        
-        # Convert CoverageItem objects to dicts for JSON serialization
-        result['coverage_items'] = [
-            item.model_dump() for item in result['coverage_items']
-        ]
-        
-        # Also convert TestCase objects to dicts
-        result['test_cases'] = [
-            tc.model_dump() for tc in result['test_cases']
-        ]
-        
+
+        coverage_items = result["coverage_items"]
+        test_cases = result["test_cases"]
+
+        if body.requirement_id:
+            suite = TestSuite(
+                id=f"bb-suite-{body.requirement_id}",
+                name=f"Blackbox design for {body.requirement.id}",
+                description="Blackbox generation output",
+                test_cases=test_cases,
+            )
+            await persist_suite(
+                db,
+                requirement_id=body.requirement_id,
+                suite=suite,
+                source_type="blackbox",
+                coverage_items=coverage_items,
+            )
+
+        result["coverage_items"] = [item.model_dump() for item in coverage_items]
+        result["test_cases"] = [tc.model_dump() for tc in test_cases]
         return result
     except Exception as e:
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Test generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Test generation failed: {str(e)}") from e
+
+
+class GenerateTechniqueRequest(BaseModel):
+    requirement: StructuredRequirement
+    use_llm: bool = True
 
 
 @router.post("/generate/{technique}", response_model=list[TestCase])
 async def generate_specific_technique(
-    requirement: StructuredRequirement,
-    technique: str
+    technique: str,
+    body: GenerateTechniqueRequest,
 ):
-    """Generate test cases using a specific black-box technique.
-    
-    Args:
-        requirement: The structured requirement to test
-        technique: Technique to use (EP, BVA, or DT)
-        
-    Returns:
-        List of generated test cases
-    """
+    """Generate test cases using a specific black-box technique."""
     try:
-        # Convert string to enum
         technique_enum = BlackBoxTechnique(technique.upper())
         test_cases = generator_engine.generate_specific_technique(
-            requirement, technique_enum
+            body.requirement, technique_enum, use_llm=body.use_llm
         )
         return test_cases
     except ValueError:
