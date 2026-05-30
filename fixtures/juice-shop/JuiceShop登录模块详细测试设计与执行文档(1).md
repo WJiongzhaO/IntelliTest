@@ -507,13 +507,50 @@ python -m pytest scripts/target_app_tests/test_login_api.py scripts/target_app_t
 
 **已通过的安全项**：LR-010/015/016/017 XSS 与部分 SQLi 未造成额外泄露；LR-013 软删除用户正确 401；LR-032 无效 TOTP 正确 401。
 
-### 12.4 跳过与阻塞原因
+### 12.4 跳过与阻塞原因（摘要）
 
-| 用例 | 原因 | 后续建议 |
-| --- | --- | --- |
-| TC-OAUTH-029 | localhost:3001 未渲染 Google 登录按钮 | 在配置了 authorizedRedirects 的环境重跑 |
-| TC-REL-019 | reset-password 返回 500（邮件/反自动化） | staging 环境或 mock 邮件服务 |
-| TC-ERR-022 | 需 DB 故障注入 | docker pause DB 或集成测试 hook |
+| 用例 | pytest | 原因 | 后续建议 |
+| --- | --- | --- | --- |
+| TC-SEC-014 / LR-014 | **XFail** | SQL 注入 payload 仍返回 200+JWT（靶场故意漏洞 DEF-001） | 真实产品应修复；Juice Shop 上为预期观察 |
+| TC-OAUTH-029 / LR-029 | **Skip** | localhost 登录页未渲染 Google OAuth 按钮 | 在 authorizedRedirects 包含当前 origin 的环境重跑 |
+| TC-REL-019 / LR-019 | **Skip** | reset-password 连续请求均 500，无法验证 429 阈值 | 配置邮件服务或 staging |
+| TC-ERR-022 / LR-022 | **Skip** | 需 DB 故障注入，本次自动化未实施 | docker pause DB 或 mock 500 |
+
+### 12.4a Skip 与 XFail 详细说明（外行可读）
+
+> 完整版（含 pytest 术语、对照总表、答辩话术）见 **`docs/测试过程与结果索引.md` §2.1**。以下为摘要。
+
+#### pytest 结果怎么读？
+
+- **Skip**：测试**没跑完**——环境或方法不具备，**不等于**被测功能一定坏了。
+- **XFail**：测试**跑完了**，结果与**安全/质量期望**不符，但**事先知道会这样**（尤其 Juice Shop 是故意含漏洞的靶场）；**不算 Failed**，不会把整次回归判红。
+
+#### XFail：TC-SEC-014 / LR-014（SQL 注入登录绕过）
+
+我们在登录邮箱字段输入 `admin@juice-sh.op'--`（SQL 注释符），任意密码。**正常产品**应返回 401、不签发 JWT。**Juice Shop 实际**返回 200 并给出登录 token——因为登录 SQL 未参数化，这是官方 **SQL Injection 挑战**（DEF-001）。脚本检测到 200+JWT 后调用 `pytest.xfail`，表示「安全验收不通过，但在靶场上是已知现象」。证据：`scripts/target_app_tests/test_login_api.py` 131–136 行。
+
+**用例来源（工具 vs 人工）**：LR-014 **需求**在 `login_requirements.csv` **人工编写**；**EP/DT/ST 三条用例主体**由 IntelliTest 综合流程**自动生成**（见 `未优化/LR-014_*.csv`）；**人工优化**阶段改写 oracle 为「安全期望 401 + 若 200 记缺陷」、补全 `admin@juice-sh.op'--` 等种子 payload，并**补漏** `SUP-LR-014-EP-003`（`' OR 1=1--`）；文档代表用例 **TC-SEC-014** 为归纳映射；**PyTest + xfail** 为人工编写的执行脚本。**不是从零手写用例，也不是工具导出后未改 oracle 直接跑。**
+
+#### Skip：TC-OAUTH-029 / LR-029（Google 登录跳转）
+
+用例要求点击「Google 登录」并跳转到 `accounts.google.com`。**本地 http://localhost:3001 登录页根本没有 Google 按钮**（OAuth 在该 origin 未授权，前端隐藏）。无法点击，故 Skip。**注意**：同环境下的 LR-030（OAuth 应隐藏）已 **Pass**，与「按钮不可见」一致；LR-029 缺的是「已授权、按钮可见」的另一套环境。
+
+#### Skip：TC-REL-019 / LR-019（忘记密码限速）
+
+用例要验证：忘记密码接口在短时间大量请求后返回 **429**。脚本连续调用 `POST /rest/user/reset-password` 时，**全部得到 HTTP 500**（本地常无邮件服务或被安全策略拦截），从未出现 429，无法判断限速逻辑，故 Skip。背景：LR-018 已证实**登录接口无限速**（RISK-001）；LR-019 本用于对照「至少 reset-password 有限速」——对照的后半段在本地未完成。
+
+#### Skip：TC-ERR-022 / LR-022（后端 500 时前端处理）
+
+用例要求：登录时若**数据库故障**导致后端 500，前端应清 token、显示错误。**实现需要在测试中主动弄挂 DB**，本次 Docker 共享环境未做故障注入，脚本直接 Skip。属于测试方法 Blocked，不是「登录 happy path 失败」。
+
+#### 对照总表
+
+| 用例 | pytest | 一句话 | 等于功能坏了？ |
+| --- | --- | --- | --- |
+| TC-SEC-014 | XFail | SQLi 能登录；靶场故意漏洞 | 真实产品：是；靶场：预期 |
+| TC-OAUTH-029 | Skip | 本地无 Google 按钮 | 否 |
+| TC-REL-019 | Skip | reset-password 全 500，测不了 429 | 否 |
+| TC-ERR-022 | Skip | 未做 DB 故障注入 | 否（未测） |
 
 ### 12.5 IntelliTest 工具有效性评价
 

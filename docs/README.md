@@ -8,6 +8,7 @@
 
 | 文档 | 说明 |
 | --- | --- |
+| **[测试过程与结果索引.md](./测试过程与结果索引.md)** | **过程一段话 + 结果摘要 + 精确到行的结果位置索引** |
 | [详细测试设计与执行文档.md](./详细测试设计与执行文档.md) | Juice Shop 登录模块实测流程 + 成员 D 工具链示例 |
 | [fixtures/juice-shop/JuiceShop登录模块详细测试设计与执行文档(1).md](../fixtures/juice-shop/JuiceShop登录模块详细测试设计与执行文档(1).md) | 登录模块完整设计与执行记录（30% 交付） |
 | [fixtures/juice-shop/OWASP_Juice_Shop_综合测试计划(1).md](../fixtures/juice-shop/OWASP_Juice_Shop_综合测试计划(1).md) | 综合测试计划 |
