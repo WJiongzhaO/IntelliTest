@@ -21,12 +21,15 @@ IntelliTest/
 │   │   │   ├── input_parser/        # FR 1.0 输入解析
 │   │   │   ├── requirement_structurer/  # FR 1.1 需求结构化
 │   │   │   ├── risk_analyzer/       # FR 2.0 风险分析
-│   │   │   ├── blackbox_generator/  # FR 3.0 黑盒测试生成 (EP/BVA/DT)
+│   │   │   ├── blackbox_generator/  # FR 3.0 黑盒测试生成 (EP/BVA/DT) 🆕 v2.0 LLM集成
 │   │   │   ├── whitebox_modeler/    # FR 4.0 白盒建模
 │   │   │   ├── oracle_synthesizer/  # FR 5.0 测试预言合成
 │   │   │   ├── export_service/      # FR 6.0 输出导出
 │   │   │   └── suite_optimizer/     # FR 7.0 测试套件优化
-│   │   ├── prompts/             # LLM Prompt 模板
+│   │   ├── services/            # 服务层
+│   │   │   ├── llm_client.py        # 🆕 LLM客户端（多提供商支持）
+│   │   │   └── ...
+│   │   ├── prompts/             # LLM Prompt 模板加载器
 │   │   └── utils/               # 工具函数 (logger 等)
 │   └── tests/
 │       ├── unit/
@@ -43,7 +46,8 @@ IntelliTest/
 │   │   ├── types/               # TypeScript 类型定义
 │   │   └── utils/               # 前端工具函数
 │   └── Dockerfile
-├── prompts/                     # 共享 Prompt 模板 (版本控制)
+├── prompts/                     # 🆕 共享 Prompt 模板 (版本控制)
+│   └── blackbox_test_design.txt # 黑盒测试设计专用Prompt
 ├── docs/                        # 项目文档及交付物
 ├── scripts/                     # 构建/部署脚本
 ├── docker-compose.yml           # 容器编排
@@ -51,15 +55,36 @@ IntelliTest/
 └── .gitignore
 ```
 
+### 🆕 v2.0 架构更新说明
+
+**黑盒测试模块（FR 3.0）**已升级为 **LLM优先 + 规则兜底** 的混合架构：
+
+- ✅ **LLM驱动**：深度理解自然语言需求，智能生成高质量测试用例
+- ✅ **多提供商支持**：Claude / OpenAI / DeepSeek 自由切换
+- ✅ **自动降级**：LLM失败时自动切换到规则引擎，确保功能可用性
+- ✅ **Prompt管理**：统一模板化管理，便于团队协作和优化
+
+详细架构说明请参考：
+- [黑盒测试模块技术文档](backend/app/engines/blackbox_generator/README.md)
+- [黑盒测试原理说明](docs/blackbox_testing_principles.md)
+- [项目结构文档](PROJECT_STRUCTURE_BLACKBOX.md)
+
 ## 技术栈
 
 | 层 | 技术 |
 |---|---|
 | **前端** | React 18, TypeScript, Ant Design 5.x, Zustand, Vite |
 | **后端** | Python 3.12, FastAPI, Pydantic, SQLAlchemy |
-| **AI** | Claude API / OpenAI API, 结构化 Prompt Engineering |
+| **AI** | Claude API / OpenAI API / DeepSeek API, 结构化 Prompt Engineering, LLM-First架构 |
 | **数据处理** | Pandas, openpyxl |
 | **部署** | Docker + Docker Compose |
+
+### 🆕 AI集成特性（v2.0）
+
+- **多LLM提供商支持**：Anthropic Claude / OpenAI GPT / DeepSeek
+- **智能容错机制**：LLM失败自动降级到规则引擎
+- **Prompt工程化**：统一模板管理，版本控制
+- **结构化输出**：强制JSON格式，便于程序解析
 
 ## 快速开始
 
@@ -86,15 +111,59 @@ source venv/bin/activate
 # 3. 安装依赖（仅首次或 requirements.txt 变更后）
 pip install -r requirements.txt
 
-# 4. 配置环境变量（复制到 backend/.env 并填入 API Key）
+# 4. 配置环境变量
+#    a) 复制模板文件
 copy ..\.env.example .env     # Windows（在 backend 目录下）
 # cp ../.env.example .env     # Linux / macOS
 
-# 5. 启动
+#    b) 编辑 .env 文件，填入 LLM API Key（必需！）
+#       - llm_provider=anthropic
+#       - anthropic_api_key=sk-ant-api03-...
+#       详见下方 "LLM 配置说明"
+
+# 5. 启动服务
 uvicorn app.main:app --reload --port 8000
 ```
 
 API 文档自动生成于 <http://localhost:8000/docs>
+
+#### ⚠️ LLM 配置说明（重要！）
+
+黑盒测试模块的LLM功能**必须配置API密钥**，否则将自动降级到规则引擎。
+
+**配置步骤**：
+
+1. 在项目根目录创建 `.env` 文件（参考 `.env.example`）
+2. 配置至少一个LLM提供商的API Key：
+
+```bash
+# 选择LLM提供商: anthropic, openai, deepseek
+llm_provider=anthropic
+
+# Anthropic Claude API（推荐，质量最佳）
+anthropic_api_key=sk-ant-api03-XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# 或 OpenAI API（备选）
+# openai_api_key=sk-proj-XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# 或 DeepSeek API（备选，国内网络友好）
+# deepseek_api_key=sk-XXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# deepseek_base_url=https://api.deepseek.com/v1
+
+# LLM模型配置
+llm_model=claude-sonnet-4-6
+llm_temperature_structured=0.0
+llm_max_retries=3
+```
+
+3. 重启后端服务使配置生效
+
+**验证配置**：
+
+- ✅ 正常：后端日志显示 `LLM blackbox generated req=REQ_XXX cases=14 techniques=['EP', 'BVA', 'DT']`
+- ❌ 异常：后端日志显示 `LLM not available, using rule-based generation`
+
+**详细说明**：请参考 [黑盒测试模块技术文档](backend/app/engines/blackbox_generator/README.md) 的"环境配置"章节。
 
 ### 前端启动
 
